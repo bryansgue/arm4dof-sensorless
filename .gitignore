@@ -1,0 +1,15 @@
+# codigo C generado por acados (regenerable)
+c_generated_code_arm_dqnmpc/
+c_generated_code_arm_decoupled/
+acados_ocp_*.json
+
+# python
+__pycache__/
+*.pyc
+
+# resultados / temporales
+results/
+*.csv
+*.log
+*.o
+*.so
