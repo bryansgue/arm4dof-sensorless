@@ -90,16 +90,21 @@ def build_ocp():
     dq_ee, _, _ = fk_ee_dq(q)
     e_se3 = ln_dual(dq_error(dq_ref, dq_ee))     # [φ(3); ρ(3)]
 
-    stage = (e_se3.T @ diag(W_se3) @ e_se3
-             + qd.T @ diag(W_qd) @ qd
-             + tau.T @ diag(W_u) @ tau)
-    term  = (e_se3.T @ diag(W_se3) @ e_se3
-             + qd.T @ diag(W_qd) @ qd)
-
-    ocp.cost.cost_type   = "EXTERNAL"
-    ocp.cost.cost_type_e = "EXTERNAL"
-    ocp.model.cost_expr_ext_cost   = stage
-    ocp.model.cost_expr_ext_cost_e = term
+    # NONLINEAR_LS: residuo y, costo = ‖y‖²_W. acados usa GAUSS-NEWTON real (JᵀWJ, sin
+    # Hessiano exacto) → ~100× mas rapido que EXTERNAL+GN. (EXTERNAL calculaba Hessiano exacto
+    # del ln_dual+FK = 86ms/12Hz. NONLINEAR_LS -> tiempo real 100Hz.)
+    y   = vertcat(e_se3, qd, tau)    # 14 = [se3(6); q̇(4); τ(4)]
+    y_e = vertcat(e_se3, qd)         # 10 = [se3(6); q̇(4)]
+    ocp.model.cost_y_expr   = y
+    ocp.model.cost_y_expr_e = y_e
+    ocp.cost.cost_type   = "NONLINEAR_LS"
+    ocp.cost.cost_type_e = "NONLINEAR_LS"
+    # pesos (los que dieron buenos resultados en E3/E4/stats). Tunables en runtime via cost_set.
+    Wd_se3=[2.,2.,2.,80.,80.,80.]; Wd_qd=[0.3]*4; Wd_u=[0.02]*4
+    ocp.cost.W   = np.diag(Wd_se3+Wd_qd+Wd_u)
+    ocp.cost.W_e = np.diag(Wd_se3+Wd_qd)
+    ocp.cost.yref   = np.zeros(14)
+    ocp.cost.yref_e = np.zeros(10)
 
     # defaults: referencia = pose home; pesos sanos
     p_def = np.zeros(N_PARAMS)
