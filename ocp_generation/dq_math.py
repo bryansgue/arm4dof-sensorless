@@ -6,7 +6,7 @@ DQ = q_r + eps q_d (8-vector). log-map se(3) con norma suavizada ARM-safe.
 """
 import numpy as np
 import casadi as ca
-from casadi import MX, DM, vertcat, horzcat, if_else, atan2
+from casadi import SX, DM, vertcat, horzcat, if_else, atan2
 
 
 def H_plus_matrix(q):
@@ -23,7 +23,7 @@ def quat_product(p, q):
 
 def dq_from_pose(quat, trans):
     """DQ unitario desde rotacion (quat) + traslacion. Q = q_r + eps ½ t⊗q_r."""
-    t_pure = vertcat(MX(0), trans)
+    t_pure = vertcat(SX(0), trans)
     q_d = 0.5 * quat_product(t_pure, quat)
     return vertcat(quat, q_d)
 
@@ -58,9 +58,9 @@ def left_jacobian_SO3_inv(phi):
     I3 = DM.eye(3)
     theta = ca.sqrt(phi[0]**2 + phi[1]**2 + phi[2]**2 + EPS_M)
     phi_x = vertcat(
-        horzcat(MX(0),  -phi[2],  phi[1]),
-        horzcat(phi[2],  MX(0),  -phi[0]),
-        horzcat(-phi[1], phi[0],  MX(0)),
+        horzcat(SX(0),  -phi[2],  phi[1]),
+        horzcat(phi[2],  SX(0),  -phi[0]),
+        horzcat(-phi[1], phi[0],  SX(0)),
     )
     n_hat = phi / theta
     n_hat_col = ca.reshape(n_hat, 3, 1)
@@ -72,7 +72,7 @@ def left_jacobian_SO3_inv(phi):
 
 def ln_dual(dq_err):
     """log(Q_err)=[φ;ρ]∈se(3). φ=eje-angulo, ρ=J_l⁻¹·t_err (acople rot-trans)."""
-    sign = if_else(dq_err[0] < 0, MX(-1.0), MX(1.0))
+    sign = if_else(dq_err[0] < 0, SX(-1.0), SX(1.0))
     q_real = sign * dq_err[0:4]
     q_dual = sign * dq_err[4:8]
     q_real_c = vertcat(q_real[0], -q_real[1], -q_real[2], -q_real[3])
@@ -87,7 +87,7 @@ def ln_dual(dq_err):
 def se3_error_decoupled(dq_err):
     """Baseline DESACOPLADO (E4): [φ; t_err] — rotacion log + traslacion CRUDA,
     SIN el acople J_l⁻¹. Para errores chicos J_l⁻¹≈I => casi == ln_dual (empate esperado)."""
-    sign = if_else(dq_err[0] < 0, MX(-1.0), MX(1.0))
+    sign = if_else(dq_err[0] < 0, SX(-1.0), SX(1.0))
     q_real = sign * dq_err[0:4]; q_dual = sign * dq_err[4:8]
     q_real_c = vertcat(q_real[0], -q_real[1], -q_real[2], -q_real[3])
     EPS_M = np.finfo(np.float64).eps

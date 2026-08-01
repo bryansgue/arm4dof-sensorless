@@ -9,7 +9,7 @@ Run:  python3 generate_arm_decoupled_ocp.py  -> ../c_generated_code_arm_decouple
 import os, shutil
 import numpy as np
 import casadi as ca
-from casadi import MX, vertcat, diag
+from casadi import SX, vertcat, diag
 from acados_template import AcadosOcp, AcadosOcpSolver
 
 import arm_params as P

@@ -56,4 +56,11 @@ print(f"DQ (ln_dual)   {1000*pe_dq:9.3f}   {oe_dq:11.4f}")
 print(f"DESACOPLADO    {1000*pe_dc:9.3f}   {oe_dc:11.4f}")
 diff=100*abs(pe_dq-pe_dc)/max(pe_dq,pe_dc,1e-9)
 print(f"-> diferencia de tracking = {diff:.1f}%  ({'EMPATE (J_l⁻¹≈I)' if diff<10 else 'DIFERENCIA'})")
-print("E4: confirmado — DQ ~= desacoplado en tracking. Valor DQ = representacion unificada, no performance.")
+print("""
+⚠️ ESTE TEST NO ES CONCLUYENTE — ver PLAN_MECHATRONICS.md, seccion "E4 revisado".
+   (a) el DQ es NONLINEAR_LS => IGNORA W[8:22]; el desacoplado es EXTERNAL y los usa,
+       asi que los dos corren con pesos DISTINTOS. Igualar con solver.cost_set.
+   (b) la referencia es de JUNTAS (alcanzable) y x0=q_ref(0): el error nunca es grande,
+       y ahi J_l⁻¹->I hace que las dos metricas sean identicas POR ALGEBRA.
+   (c) pe[50:] descarta el transitorio, que es donde podrian separarse.
+   Comparacion valida = E4-BIS (referencia inalcanzable, mismo tipo de costo).""")

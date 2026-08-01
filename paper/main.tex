@@ -1,0 +1,1560 @@
+\documentclass{ieeeaccess}
+\usepackage{cite}
+\usepackage{amsmath,amssymb,amsfonts,amsthm}
+\usepackage{mathtools}
+\usepackage{graphicx}
+\graphicspath{{../figures/}}
+\usepackage{textcomp}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{bm}
+\usepackage{booktabs}
+\usepackage{xcolor}
+\usepackage{hyperref}
+\usepackage{multirow}
+\usepackage{array}
+\usepackage{tabularx}
+\usepackage{enumitem}
+\usepackage{siunitx}
+
+\makeatletter
+\AtBeginDocument{\DeclareMathVersion{bold}
+\SetSymbolFont{operators}{bold}{T1}{times}{b}{n}
+\SetSymbolFont{NewLetters}{bold}{T1}{times}{b}{it}
+\SetMathAlphabet{\mathrm}{bold}{T1}{times}{b}{n}
+\SetMathAlphabet{\mathit}{bold}{T1}{times}{b}{it}
+\SetMathAlphabet{\mathbf}{bold}{T1}{times}{b}{n}
+\SetMathAlphabet{\mathtt}{bold}{OT1}{pcr}{b}{n}
+\SetSymbolFont{symbols}{bold}{OMS}{cmsy}{b}{n}
+\renewcommand\boldmath{\@nomath\boldmath\mathversion{bold}}}
+\makeatother
+
+\newtheorem{proposition}{Proposition}
+\newtheorem{problem}{Problem}
+\newtheorem{remark}{Remark}
+
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\norm}[1]{\left\| #1 \right\|}
+\newcommand{\Jv}{\bm{J}_{\!v}}
+\newcommand{\Jw}{\bm{J}_{\!\omega}}
+\newcommand{\Jfull}{\bm{J}}
+\newcommand{\Pobs}{\bm{P}}
+\newcommand{\Pff}{\bm{P}_{\!f\!f}}
+\newcommand{\SEthree}{\mathrm{SE}(3)}
+\newcommand{\sethree}{\mathfrak{se}(3)}
+\newcommand{\tauext}{\bm{\tau}_{\mathrm{ext}}}
+\newcommand{\tauact}{\bm{\tau}_{\mathrm{act}}}
+
+\begin{document}
+\history{Date of publication xxxx 00, 0000, date of current version xxxx 00, 0000.}
+\doi{10.1109/ACCESS.2026.0000000}
+
+\title{Contact-Model-Aware Sensorless Force Estimation and Compliant Predictive
+Control for Velocity-Actuated Low-Cost Manipulators}
+
+\author{{[Author One]}\authorrefmark{1},
+{[Author Two]}\authorrefmark{2}
+and {[Author Three]}\authorrefmark{2}}
+
+\address[1]{[Affiliation 1] (e-mail: author1@example.org)}
+\address[2]{[Affiliation 2] (e-mail: author2@example.org)}
+
+\tfootnote{[Funding statement.]}
+
+\markboth
+{[Author] \headeretal:~Sensorless Force Estimation for Velocity-Actuated Arms}
+{[Author] \headeretal:~Sensorless Force Estimation for Velocity-Actuated Arms}
+
+\corresp{Corresponding author: [Author One] (e-mail: author1@example.org).}
+
+\begin{abstract}
+Compliant physical interaction on low-cost manipulators must work without a
+force/torque sensor, whose price exceeds that of the arm, and with servos that
+accept velocity rather than torque commands. Residual-based sensorless estimation
+was developed for torque-actuated arms with six or more joints, where neither
+constraint applies, and this paper characterizes what changes when both do. We
+first show that for fewer than six joints the contact model, not the Jacobian
+rank, determines what can be sensed. Inverting the residual for a full wrench is
+under-determined and silently reassigns contact force to a spurious moment,
+discarding $50.5\,\%$ of an applied unit force on average over $2197$
+configurations of a 4-DoF arm and up to $99.6\,\%$, while still correlating with
+ground truth at $0.997$. A point-contact inversion is exact wherever the
+linear-velocity Jacobian has full row rank, which holds throughout the sampled
+workspace, and reduces force RMSE by a factor of fourteen against an independent
+physics engine. We then show that velocity-level actuation, usually regarded as an
+obstacle, restricts the dynamic model to the estimator alone: the residual is
+invariant to the inner servo loop, the finite-differenced acceleration carries
+$0.006\,\%$ of the signal, and a kinematic controller using no inertia matrix, bias
+term, or servo gain matches a torque-level formulation throughout the compliant
+loop at one twenty-fifth of the computational cost. Under the quantization and
+stiction of the real servo, over $2000$ randomized trials, the point-contact
+inversion attains $18.0\,\%$ median relative error against $69.6\,\%$, and
+rejecting postures with $\sigma_{\min}(\bm J_{\!v})<0.06$ halves its ninetieth
+percentile while leaving the six-dimensional error unchanged, separating amplified
+noise from structural misattribution. Finally, because the actuator can exert only
+$3.9$ to $5.9$~N against its worst direction while manual guidance requires $5$ to
+$15$~N, compliance is synthetic below that threshold and physical above it, with a
+measurable transition. All results are obtained in simulation against a model
+validated to $10^{-10}$; a staged hardware protocol with quantified detection
+power is specified.
+\end{abstract}
+
+\begin{keywords}
+Compliant control, dual quaternions, force estimation, low-cost robotics, model
+predictive control, physical human-robot interaction, sensorless sensing,
+under-actuated manipulators, velocity control.
+\end{keywords}
+
+\titlepgskip=-21pt
+
+\maketitle
+
+% =========================================================================
+\section{Introduction}
+\label{sec:introduction}
+% =========================================================================
+
+\PARstart{C}{ompliant} physical interaction, in which a manipulator yields to an
+external push and recovers its task once released, underpins hand guiding,
+contact-rich assembly, and safe operation in shared workspaces. The canonical
+implementation measures the interaction wrench with a wrist force/torque (F/T)
+sensor and closes an impedance or admittance law around
+it~\cite{hogan1985impedance,siciliano1999forcecontrol}.
+
+On research-grade manipulators this is unremarkable. On arms assembled from
+commercial smart servos, a class that increasingly serves education, small-scale
+automation, and mobile manipulation research, it is not viable. A six-axis F/T
+sensor typically costs more than the entire mechanism, and mounting one consumes
+payload and structural stiffness that a lightweight arm cannot spare. The economic
+argument that motivates a low-cost arm is precisely the argument against
+instrumenting it.
+
+Two obstacles are usually cited against doing without the sensor on such a
+platform, and this paper argues that both have been misread.
+
+\subsection{First obstacle: too few joints to sense a wrench}
+The established sensorless alternative is a momentum or residual observer, which
+compares measured joint accelerations and actuator torques against a dynamic model
+and attributes the mismatch to an external
+wrench~\cite{deluca2005sensorless,deluca2006collision,magrini2014virtual}. The
+approach is mature and requires no hardware beyond what a servo already reports;
+\cite{haddadin2017survey} surveys its detection, isolation, and identification
+variants.
+
+The residual lives in joint space and is mapped to a Cartesian wrench through the
+transpose Jacobian pseudoinverse. This step recovers six unknowns from $n$
+measurements. For $n\ge6$ it is at worst a conditioning question. For the
+four-joint arms that dominate the low-cost segment the system is under-determined
+by construction, and the minimum-norm solution resolves the ambiguity by
+distributing the residual between force and moment. When the physical contact is a
+pure force, as a human push is, part of it is returned as a spurious moment and is
+absent from the force estimate.
+
+The failure is silent and easy to misdiagnose. Applying a $6$~N push to the arm
+studied here and inverting in six dimensions returns $0.99$~N, an error of
+$83\,\%$, which reads as evidence that a four-joint arm cannot perceive that
+interaction. The joint torques say otherwise: the same push produces
+$1.29\,\mathrm{N}\cdot\mathrm{m}$ at the base joint. The information is present in
+the measurement and the estimator discards it.
+
+\subsection{Second obstacle: the actuator takes velocity, not torque}
+Smart servos of this class are commanded in velocity, and the residual observer is
+formulated in torque. The apparent mismatch is often taken to mean that sensorless
+estimation is unavailable on such hardware, or that the servo loop must first be
+identified.
+
+Neither is the case, and the reason is that the servo exposes a third signal
+besides position and velocity: the effort it is applying, reported as motor
+current. That channel is exactly the quantity the residual requires, and it takes
+the place of the force/torque sensor throughout this work. Since the residual
+consumes the applied torque as measured rather than as modeled, the internal
+velocity loop may remain a black box.
+
+Section~\ref{sec:velocity} works out what this changes, and the consequences run
+in the favorable direction: the interaction signal migrates from the acceleration
+to the actuator torque, the dynamic model becomes unnecessary in the controller,
+and the actuator saturates below the force range of manual guidance, so the arm
+yields physically without any control effort.
+
+\subsection{Contributions}
+\label{sec:claims}
+As shown in Table~\ref{tab:gap}, residual-based interaction sensing has been
+developed for torque-actuated manipulators with six or more joints, where the
+wrench inversion is over-determined and the actuator accepts the quantity the
+controller computes. Neither condition holds on a low-cost smart-servo arm. To
+close this gap, this paper makes the following three contributions:
+
+\begin{table}[!t]
+\caption{Residual-based interaction sensing: operating regime of representative
+approaches.}
+\label{tab:gap}
+\centering
+\footnotesize
+\setlength{\tabcolsep}{3pt}
+\begin{tabular}{lcccc}
+\toprule
+ & joints & actuation & inversion & force error\\
+\midrule
+\cite{deluca2005sensorless}  & $\ge6$ & torque & six-dimensional & --- \\
+\cite{deluca2006collision}   & $7$    & torque & six-dimensional & --- \\
+\cite{magrini2014virtual}    & $7$    & torque & point contact   & at one pose \\
+\cite{haddadin2017survey}    & $\ge6$ & torque & six-dimensional & --- \\
+\midrule
+this work & $\bm{4}$ & \textbf{velocity} & point contact & over workspace\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{itemize}[leftmargin=*]
+\item We characterize sensorless force estimation for $n<6$ and show that the
+contact model, not the Jacobian rank, determines what can be sensed. Over $2197$
+workspace configurations the standard six-dimensional inversion discards
+$50.5\,\%$ of an applied unit force on average and up to $99.6\,\%$, and it fails
+silently, correlating with ground truth at $0.997$ while carrying a $2.227$~N
+error. Sweeping the full sphere of push directions at six configurations, its
+error is a linear function of the alignment with the least observable direction
+with correlation $0.9993$, whereas a point-contact inversion is exact to
+$4\times10^{-13}\,\%$ over all $12\,000$ directions and reduces force RMSE by a
+factor of fourteen against an independent physics engine.
+
+\item We show that under velocity-level actuation the dynamic model is required by
+the estimator alone, so the controller can be model-free. Of the three possible
+formulations, the dynamically consistent velocity-level problem is ill-posed
+unless the servo loop architecture is identified and fails at every solve, whereas
+a kinematic controller using neither inertia matrix, bias term, nor servo gain
+matches the torque-level formulation throughout the compliant loop at one
+twenty-fifth of the computational cost. What must be identified on hardware
+reduces to the mass properties and one torque constant, both serving estimation
+only.
+
+\item We evaluate both inversions under the quantization and stiction of the real
+servo, over $2000$ randomized configurations and contact forces. The
+point-contact inversion attains $18.0\,\%$ median relative error against
+$69.6\,\%$ for the six-dimensional one, and rejecting postures with
+$\sigma_{\min}(\Jv)<0.06$ halves its ninetieth percentile from $61\,\%$ to
+$30\,\%$ while leaving the six-dimensional error unchanged, confirming that one
+error is amplified noise and the other is structural misattribution.
+\end{itemize}
+
+Two of the ingredients are individually elementary and we do not claim them: that
+$\Jfull^{\!\top}\bm F=\tauext$ is under-determined for $n<6$ is linear algebra,
+and restricting the unknown to a force at a known contact point is standard
+practice~\cite{magrini2014virtual}. What is new is the regime, the
+quantification, and what follows from them for this class of hardware.
+
+\subsection{Scope and organization}
+All results reported here are obtained in simulation against a model validated to
+$10^{-10}$ against an independent physics engine, which also serves as the plant
+for the interaction experiments. Hardware validation is not claimed;
+Section~\ref{sec:discussion} states the limitations. Section~\ref{sec:related} positions the work,
+Section~\ref{sec:system} describes the platform and model,
+Sections~\ref{sec:estimation} to~\ref{sec:control} develop the method,
+Section~\ref{sec:results} reports experiments, and Section~\ref{sec:conclusion}
+concludes.
+
+% =========================================================================
+\section{Related Work}
+\label{sec:related}
+% =========================================================================
+
+\subsection{Sensorless interaction sensing}
+Residual-based external wrench estimation originates in collision detection. De
+Luca and Mattone introduced the sensorless residual for hybrid force/motion
+control~\cite{deluca2005sensorless}, and the method was extended to safe reaction
+on lightweight arms~\cite{deluca2006collision}. Magrini \emph{et al.} developed
+the virtual force sensor, which for redundant arms estimates the contact location
+along the structure in addition to the force~\cite{magrini2014virtual}. A
+comprehensive account of detection, isolation, and identification appears
+in~\cite{haddadin2017survey}.
+
+This literature is developed almost exclusively for manipulators with six or seven
+joints, where the transpose Jacobian has full column rank and the wrench inversion
+is over-determined. The under-actuated regime, in which the number of joints is
+smaller than the dimension of the wrench, receives comparatively little attention,
+and the consequences for the inversion step are, to our knowledge, not
+characterized. Nor is the interaction between sensorless estimation and
+velocity-level actuation, which is the norm on low-cost hardware. This paper
+addresses both gaps.
+
+The closest prior work is~\cite{magrini2014virtual}, and the distinction is worth
+stating precisely because both use a point-contact model. There, the contact
+location is the \emph{unknown} to be estimated, on a seven-joint arm where the
+six-dimensional inversion is already well posed and the point-contact assumption
+serves to localize the contact along the structure. Here the location is known by
+construction, the unknown is the force alone, and the point-contact assumption
+serves a different purpose: it reduces the dimension of the unknown from six to
+three, which is what makes the problem solvable at all when $n=4$. The
+distinction matters because in the redundant, torque-actuated setting the
+six-dimensional inversion is merely one option among several, whereas for $n<6$ it
+is structurally wrong in the sense quantified in Section~\ref{sec:estimation}.
+
+\subsection{Capability analysis of manipulators}
+Manipulability ellipsoids~\cite{yoshikawa1985manipulability} and force
+polytopes~\cite{chiacchio1997polytope} describe the set of velocities or forces a
+manipulator can \emph{produce}, and are standard tools for posture optimization.
+The question posed here is the dual one, namely which external contacts a
+manipulator can \emph{perceive} through its own actuators. We show that for $n<6$
+the answer is governed not by the rank deficit of the full Jacobian, as a direct
+transposition of the classical analysis would suggest, but by the contact model
+the estimator assumes. The force polytope reappears in
+Section~\ref{sec:velocity-regimes} in its classical role, where it sets the
+threshold between synthetic and physical compliance.
+
+\subsection{Dual quaternion representation and predictive control}
+Dual quaternions provide a singularity-free representation of $\SEthree$ that
+keeps translation and rotation in one algebraic object, and have been used for
+kinematic control of manipulators~\cite{figueredo2013dq} and packaged for general
+robot modeling~\cite{adorno2021dqrobotics}. The logarithmic map to $\sethree$
+couples the two components through the left Jacobian of
+$\mathrm{SO}(3)$~\cite{sola2018microlie}. We adopt this representation for the
+tracking cost and, in Section~\ref{sec:res-ablation}, report an ablation isolating
+what the coupling contributes on an under-actuated arm, where the reference is
+generically unreachable. Real-time nonlinear predictive control is enabled by the
+real-time iteration scheme~\cite{diehl2005rti} and by embedded solver
+frameworks~\cite{verschueren2022acados,andersson2019casadi,frison2020hpipm}.
+
+% =========================================================================
+\section{System Description and Modeling}
+\label{sec:system}
+% =========================================================================
+
+\subsection{Platform}
+The manipulator has $n=4$ revolute joints driven by Dynamixel MX-28R smart servos,
+with a rigid gripper treated as a fixed payload. Actuation limits are
+$|\tau_i|\le1.4\,\mathrm{N}\cdot\mathrm{m}$ and
+$|\dot q_i|\le5.969$~rad/s. Each servo reports joint position and velocity, and
+its current measurement provides a proxy for the applied actuator torque. The
+servo accepts a velocity command; there is no torque command and no F/T sensor.
+
+The first joint is a base yaw with vertical axis, and the remaining three are
+pitch joints whose axes are mutually parallel and orthogonal to it. This layout, a
+yaw base followed by a planar arm, is the standard low-cost architecture and is
+what determines the structure of the estimation problem.
+
+\subsection{Rigid-body dynamics}
+The joint-space dynamics under an external wrench $\bm F$ applied at the
+end-effector are
+\begin{equation}
+\bm M(\bm q)\,\ddot{\bm q}+\bm h(\bm q,\dot{\bm q})
+=\bm\tau+\Jfull(\bm q)^{\!\top}\bm F ,
+\label{eq:dyn}
+\end{equation}
+with $\bm q\in\R^4$ the joint angles, $\bm\tau\in\R^4$ the actuator torques, and
+\begin{equation}
+\Jfull(\bm q)=\begin{bmatrix}\Jv(\bm q)\\ \Jw(\bm q)\end{bmatrix}\in\R^{6\times4}
+\label{eq:jac}
+\end{equation}
+the geometric end-effector Jacobian partitioned into linear and angular blocks.
+The wrench is correspondingly $\bm F=[\bm f^{\!\top}\ \bm m^{\!\top}]^{\!\top}$,
+with $\bm f$ the contact force and $\bm m$ the contact moment in the world frame.
+The inertia matrix is assembled from per-link geometric Jacobians,
+\begin{equation}
+\bm M=\sum_i \Big( m_i\,\bm J_{v_i}^{\!\top}\bm J_{v_i}
++\bm J_{\omega_i}^{\!\top}\,\bm R_i\bm I_i\bm R_i^{\!\top}\,\bm J_{\omega_i}\Big)
++\bm D_a ,
+\label{eq:inertia}
+\end{equation}
+where $\bm D_a$ is the servo rotor armature, and $\bm h$, collecting Coriolis,
+centrifugal, and gravitational terms, follows from the Lagrangian.
+
+\subsection{Sensing and actuation interface}
+\label{sec:interface}
+The servo exposes three measurements and accepts one command, and the way they are
+used is the whole architecture, shown in Fig.~\ref{fig:arch}.
+
+\begin{itemize}[leftmargin=*]
+\item \emph{Position} $\bm q$ and \emph{velocity} $\dot{\bm q}$, from the internal
+encoder. The acceleration $\ddot{\bm q}$ is obtained by finite differences of
+$\dot{\bm q}$.
+\item \emph{Effort}, reported as motor current and converted to the applied
+actuator torque $\tauact=\bm K_t\,\bm i$ through a per-joint constant $\bm K_t$.
+\emph{This third signal is what replaces the force/torque sensor.} It is the only
+channel through which the interaction reaches the controller, and
+Section~\ref{sec:velocity} shows that under velocity-level actuation it carries
+essentially the entire interaction signal.
+\item \emph{Command} $\bm u$, a joint velocity setpoint. There is no torque
+command.
+\end{itemize}
+
+\begin{figure*}[!t]
+\centering
+\includegraphics[width=0.95\textwidth]{architecture.png}
+\caption{System architecture. The servo returns position, velocity, and effort;
+the effort channel takes the place of a force/torque sensor. The residual and the
+point-contact inversion produce $\hat{\bm f}$, an admittance converts it into a
+displaced dual quaternion reference, and the predictive controller returns a joint
+velocity command, which is the only input the actuator accepts.}
+\label{fig:arch}
+\end{figure*}
+
+\subsection{The velocity-actuated plant}
+\label{sec:velplant}
+Since the actuator is commanded in velocity, the plant seen by the controller is
+not \eqref{eq:dyn}. Modeling the internal servo loop as a proportional velocity
+regulator,
+\begin{equation}
+\bm\tau=k_v\,(\bm u-\dot{\bm q}),
+\label{eq:servoloop}
+\end{equation}
+and substituting into \eqref{eq:dyn} gives the closed-loop plant in compact form,
+\begin{equation}
+\boxed{\;\bm M(\bm q)\,\ddot{\bm q}+k_v\,\dot{\bm q}+\bm h(\bm q,\dot{\bm q})
+=k_v\,\bm u+\Jfull(\bm q)^{\!\top}\bm F\;}
+\label{eq:velplant}
+\end{equation}
+which we verified against \eqref{eq:dyn} to $4.3\times10^{-14}$ over randomized
+states, gains, and wrenches. Equation \eqref{eq:velplant} makes the role of the
+servo explicit: it contributes a damping term $k_v\bm I$ and an input gain $k_v$,
+and as $k_v\to\infty$ it degenerates to the kinematic limit $\dot{\bm q}=\bm u$ in
+which the arm is a pure velocity source. Actuator saturation enters as
+$\norm{\bm\tau}_\infty\le\tau_{\max}$ applied to \eqref{eq:servoloop}, and
+Section~\ref{sec:velocity-regimes} shows that this bound, rather than the loop
+gain, is what governs the interaction.
+
+\begin{remark}[The estimator does not use $k_v$]
+Equation \eqref{eq:servoloop} is written for analysis only. The residual
+\eqref{eq:residual} uses $\tauact$ as \emph{measured} through the effort channel,
+not as modeled, so $k_v$ appears nowhere in the estimator. We verified that the
+recovered force is identical for $k_v\in\{1,10,100\}$. The internal servo loop may
+therefore remain a black box, and no system identification of it is required. This
+is the formal reason why velocity-level actuation does not obstruct sensorless
+estimation.
+\label{rem:kv}
+\end{remark}
+
+\subsection{Dual quaternion kinematics}
+The end-effector pose is a unit dual quaternion
+$\underline{\bm q}_{ee}=\bm q_r+\varepsilon\,\bm q_d$, with
+$\bm q_d=\tfrac12\,\bm t\otimes\bm q_r$. The error against a desired
+$\underline{\bm q}_d$ is
+$\underline{\bm q}_e=\underline{\bm q}_d^{*}\otimes\underline{\bm q}_{ee}$ and its
+logarithm is
+\begin{equation}
+\bm e=\log\underline{\bm q}_e
+=\begin{bmatrix}\bm\varphi\\ \bm\rho\end{bmatrix}\in\sethree,
+\qquad
+\bm\rho=\bm J_\ell(\bm\varphi)^{-1}\bm t_{\mathrm{err}},
+\label{eq:logdual}
+\end{equation}
+in which the translational part is expressed in the frame of the rotational error
+through the inverse left Jacobian of $\mathrm{SO}(3)$~\cite{sola2018microlie}.
+This coupling distinguishes \eqref{eq:logdual} from a decoupled error and its
+contribution is quantified in Section~\ref{sec:res-ablation}.
+
+\subsection{Model validation}
+\label{sec:validation}
+The symbolic model was built independently of the simulator and validated against
+MuJoCo~\cite{todorov2012mujoco} over eight configurations spanning the joint
+ranges (Table~\ref{tab:validation}). The agreement is at the numerical precision
+of the reference implementation, so modeling error is not a confounding factor in
+what follows. This matters, because the central claim of this paper is that an
+observed estimation error belongs to the inversion step, and that attribution is
+credible only if the model itself is exact.
+
+\begin{table}[!t]
+\caption{Model validation against MuJoCo, eight configurations.}
+\label{tab:validation}
+\centering
+\small
+\begin{tabular}{lc}
+\toprule
+quantity & maximum deviation\\
+\midrule
+inertia matrix $\bm M$          & $8.8\times10^{-11}$\\
+bias term $\bm h$               & $2.7\times10^{-9}$\\
+forward kinematics, position    & $6.9\times10^{-13}$~m\\
+forward kinematics, orientation & $0$ (machine precision)\\
+geometric Jacobian $\Jfull$     & $4\times10^{-17}$\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+% =========================================================================
+\section{Contact-Model-Aware Force Estimation}
+\label{sec:estimation}
+% =========================================================================
+
+\subsection{The residual and the estimation problem}
+Rearranging \eqref{eq:dyn} gives the measurable residual
+\begin{equation}
+\tauext=\bm M(\bm q)\ddot{\bm q}+\bm h(\bm q,\dot{\bm q})-\tauact
+=\Jfull(\bm q)^{\!\top}\bm F \;\in\;\R^{4},
+\label{eq:residual}
+\end{equation}
+computed from joint measurements alone: $\bm q$ and $\dot{\bm q}$ from encoders,
+$\ddot{\bm q}$ by finite differences, and $\tauact$ from the servo current.
+Everything the arm knows about the interaction is in these four numbers.
+
+\begin{problem}
+Given $\tauext\in\R^4$ from \eqref{eq:residual}, recover the external contact
+force acting at the end-effector, and characterize the configurations in which
+recovery is possible and the accuracy attainable.
+\label{prob:main}
+\end{problem}
+
+Problem~\ref{prob:main} asks for a \emph{force}, not a wrench. That distinction is
+the substance of this section: the number of unknowns admitted into the inversion
+determines whether the problem is solvable, and the conventional choice admits too
+many.
+
+\subsection{The six-dimensional inversion}
+The conventional estimator treats the full wrench as unknown and solves
+$\Jfull^{\!\top}\bm F=\tauext$ for $\bm F\in\R^6$ from four equations. The system
+is under-determined and the minimum-norm solution is
+\begin{equation}
+\hat{\bm F}_{6}=\Jfull\big(\Jfull^{\!\top}\Jfull\big)^{-1}\tauext=\Pobs\,\bm F,
+\quad
+\Pobs=\Jfull\big(\Jfull^{\!\top}\Jfull\big)^{-1}\Jfull^{\!\top},
+\label{eq:sixinv}
+\end{equation}
+with $\Pobs$ the orthogonal projector onto $\mathrm{col}\,\Jfull\subset\R^6$.
+
+\begin{proposition}[Force-to-moment misattribution]
+For a pure contact force $\bm F=[\bm f^{\!\top}\ \bm 0^{\!\top}]^{\!\top}$, the
+force returned by \eqref{eq:sixinv} is $\Pff\bm f$, where $\Pff$ is the leading
+$3\times3$ block of $\Pobs$. In general $\norm{\Pff\bm f}<\norm{\bm f}$, and the
+deficit appears as a nonzero moment in the lower block of $\hat{\bm F}_{6}$.
+\label{prop:split}
+\end{proposition}
+
+The mechanism is misattribution, not loss of information. A pure force and a
+suitable force-moment pair produce identical joint torques, and minimum-norm
+selects the latter because it has smaller Euclidean norm in $\R^6$. Both are
+consistent with the measurement; only one is realizable by the contact under
+consideration, and nothing in the formulation encodes which.
+
+At the task configuration $\bm q_{\text{task}}=[0,\,1.2,\,-0.9,\,0.4]$~rad, a
+$6$~N push normal to the plane of the arm produces
+$\tauext=[1.2867,\,0,\,0,\,0]^{\!\top}\,\mathrm{N}\cdot\mathrm{m}$. Equation
+\eqref{eq:sixinv} returns $0.264$~N of force together with
+$1.230\,\mathrm{N}\cdot\mathrm{m}$ of moment. The eigenvalues of $\Pff$ there are
+$\{0.044,\,1,\,1\}$: two force directions pass unaltered while a third is almost
+entirely converted into a moment.
+
+\begin{remark}[Aggregate observability is uninformative]
+Since $\Pobs$ is an orthogonal projector, $\mathrm{tr}\,\Pobs=\mathrm{rank}\,
+\Jfull$ identically, so for wrench directions drawn uniformly on the unit sphere
+of $\R^6$ the expected fraction returned by \eqref{eq:sixinv} is
+$\mathrm{rank}\,\Jfull/6$ regardless of configuration. Any workspace-averaged
+observability index built on $\Pobs$ is constant by construction and carries no
+information about posture. The structure lies in how the deficit is distributed
+across directions.
+\label{rem:trace}
+\end{remark}
+
+\begin{remark}[Numerical care at singularities]
+At singular configurations $\Jfull$ loses rank and \eqref{eq:sixinv} is undefined.
+Throughout this work $\Pobs$ is computed from the thin singular value
+decomposition $\Jfull=\bm U\bm\Sigma\bm V^{\!\top}$ as
+$\Pobs=\bm U_r\bm U_r^{\!\top}$ with $r$ the numerical rank, which remains valid
+there.
+\end{remark}
+
+\subsection{The point-contact inversion}
+A human push at the end-effector transmits a force at a known point and no moment
+about that point. Imposing $\bm m=\bm 0$ in \eqref{eq:residual} leaves
+\begin{equation}
+\Jv(\bm q)^{\!\top}\,\bm f=\tauext,\qquad \Jv^{\!\top}\in\R^{4\times3},
+\label{eq:threeinv}
+\end{equation}
+over-determined: four equations in three unknowns, with least-squares solution
+\begin{equation}
+\hat{\bm f}_{3}=\big(\Jv\Jv^{\!\top}\big)^{-1}\Jv\,\tauext .
+\label{eq:threesol}
+\end{equation}
+
+\begin{proposition}[Exact recovery]
+$\hat{\bm f}_{3}=\bm f$ for every pure contact force applied at the end-effector
+if and only if $\mathrm{rank}\,\Jv=3$. The result is independent of the rank
+deficit of $\Jfull$ and does not involve $\Jw$.
+\label{prop:exact}
+\end{proposition}
+
+\begin{proof}
+By construction \eqref{eq:threeinv} is consistent, since $\tauext=\Jv^{\!\top}
+\bm f$ for the true $\bm f$. A consistent least-squares problem attains zero
+residual, and its solution is unique precisely when $\Jv^{\!\top}$ has trivial
+kernel, that is when $\mathrm{rank}\,\Jv=3$. If $\mathrm{rank}\,\Jv<3$ the
+solution set is an affine subspace of dimension $3-\mathrm{rank}\,\Jv$ and
+\eqref{eq:threesol} returns its minimum-norm element, which differs from $\bm f$
+whenever $\bm f$ has a component in $\ker\Jv^{\!\top}$. The angular block $\Jw$
+appears nowhere in \eqref{eq:threeinv}, so the rank of $\Jfull$ is irrelevant.
+\end{proof}
+
+Proposition~\ref{prop:exact} moves the governing condition from
+$\Jfull\in\R^{6\times4}$, which cannot attain rank $6$, to $\Jv\in\R^{3\times4}$,
+which generically attains rank $3$. Four joints are not too few to sense a contact
+force at the end-effector; they are one more than the minimum required.
+
+\begin{remark}[What the model assumption costs]
+The point-contact model requires the contact location to be known. This holds for
+hand guiding at the end-effector and fails for contact along the links. If the
+contact additionally transmits a moment, for instance through a rigidly grasped
+object, the ambiguity of Proposition~\ref{prop:split} returns and
+\eqref{eq:sixinv} becomes the honest choice, with the accompanying loss. Extending
+the estimator to an unknown contact point, in the spirit
+of~\cite{magrini2014virtual}, is future work.
+\label{rem:cost}
+\end{remark}
+
+\subsection{Conditioning as the binding limitation}
+With exactness settled, the practically relevant quantity is sensitivity to
+measurement noise. Perturbing the residual by $\delta\bm\tau$ perturbs the
+estimate by
+\begin{equation}
+\norm{\delta\hat{\bm f}_{3}}\le\frac{\norm{\delta\bm\tau}}{\sigma_{\min}(\Jv)} ,
+\label{eq:noise}
+\end{equation}
+so $\sigma_{\min}(\Jv)$ bounds the amplification of residual error into force
+error and replaces observability as the quantity to map.
+
+\subsection{Workspace characterization}
+\label{sec:sweep}
+We sweep the three pitch joints over their full ranges on a $13^3$ grid, fixing
+the base yaw since it only rotates the picture in the world frame and leaves every
+quantity of interest invariant. This gives $2197$ configurations, at each of which
+we compute the rank and singular values of $\Jv$ and apply a random unit contact
+force, recording the error of both estimators. Table~\ref{tab:sweep} summarizes
+and Fig.~\ref{fig:map} maps the outcome.
+
+\begin{table*}[!t]
+\caption{Workspace sweep over $2197$ configurations. The contact force is exactly
+recoverable everywhere by the point-contact estimator, while the six-dimensional
+inversion discards half of it on average.}
+\label{tab:sweep}
+\centering
+\small
+\begin{tabular}{lcccc}
+\toprule
+quantity & mean & median & 5th percentile & extreme\\
+\midrule
+$\sigma_{\min}(\Jv)$ & $0.0500$ & $0.0496$ & $0.0127$ & $7.6\times10^{-5}$ (min)\\
+$\mathrm{cond}(\Jv)$ & --- & $6.7$ & --- & $29.4$ (95th percentile)\\
+$\mathrm{rank}\,\Jv=3$ & \multicolumn{4}{c}{$100\,\%$ of configurations}\\
+\midrule
+\multicolumn{5}{l}{\emph{error estimating a unit contact force}}\\
+six-dimensional, $\norm{\hat{\bm f}_{6}-\bm f}$ & $0.5046$ & $0.5110$ & --- & $0.9961$ (max)\\
+point contact, $\norm{\hat{\bm f}_{3}-\bm f}$ & $3.6\times10^{-15}$ & $7.1\times10^{-16}$ & --- & $1.4\times10^{-12}$ (max)\\
+\bottomrule
+\end{tabular}
+\end{table*}
+
+Two facts stand out. First, $\mathrm{rank}\,\Jv=3$ in $100\,\%$ of the grid, so by
+Proposition~\ref{prop:exact} the contact force is exactly recoverable everywhere,
+and the numerical error of $\hat{\bm f}_{3}$ is at machine precision. Second, over
+the same set the six-dimensional inversion discards $50.5\,\%$ of the applied
+force on average and, in the worst configuration and direction, essentially all of
+it.
+
+\begin{figure*}[!t]
+\centering
+\includegraphics[width=0.92\textwidth]{observability_map.png}
+\caption{Force estimation over a slice of the workspace ($q_1=0$, $q_4=0.4$~rad).
+(a) Worst-direction eigenvalue of $\Pff$, the fraction of a pure contact force
+that the six-dimensional inversion returns as force; close to zero throughout,
+which is the effect that has been misread as blindness of the mechanism.
+(b) $\sigma_{\min}(\Jv)$, which bounds noise amplification for the point-contact
+inversion and is the quantity that actually limits it. The star marks the task
+configuration.}
+\label{fig:map}
+\end{figure*}
+
+The geometric reason the six-dimensional inversion fails in a particular direction
+is worth stating, because it explains why the effect is systematic on this class
+of arm. The three pitch joints are coplanar, so the torques they produce resist
+only loads in the plane of the arm. A force component normal to that plane reaches
+the actuators through a single path, the moment it exerts about the base yaw axis.
+A moment applied directly about that same axis produces the identical joint torque
+with a smaller norm in $\R^6$, so the minimum-norm criterion prefers it. The
+out-of-plane force direction is therefore exactly the one that the
+six-dimensional inversion converts into a moment, in every configuration of this
+architecture.
+
+\subsection{Directional characterization}
+\label{sec:dirsweep}
+The preceding argument predicts that the error of the six-dimensional inversion is
+governed by the \emph{direction} of the push and by nothing else. That prediction
+is falsifiable and we test it directly, since a claim of this kind cannot rest on
+the two push directions used in the closed-loop experiments of
+Section~\ref{sec:res-estimation}. We sweep the full sphere of push directions,
+$2000$ uniformly drawn directions at each of six configurations spread over the
+workspace, and for each direction record the relative error of both inversions
+together with the alignment $|\cos\theta|$ between the push and the least
+observable eigenvector of $\Pff$ at that pose.
+
+\begin{table}[!t]
+\caption{Directional sweep. Relative force error over $2000$ push directions at
+each of six configurations.}
+\label{tab:dirsweep}
+\centering
+\footnotesize
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{lccccc}
+\toprule
+& & \multicolumn{3}{c}{six-dimensional [\%]} & point contact\\
+\cmidrule(lr){3-5}
+pose & $\sigma_{\min}(\Jv)$ & median & p90 & max & max [\%]\\
+\midrule
+P1 & $0.0255$ & $47.7$ & $85.7$ & $95.6$ & $4.1\times10^{-13}$\\
+P2 & $0.0357$ & $49.5$ & $89.7$ & $99.6$ & $1.9\times10^{-13}$\\
+P3 & $0.0597$ & $49.1$ & $86.3$ & $96.5$ & $1.9\times10^{-13}$\\
+P4 & $0.0403$ & $48.1$ & $89.6$ & $99.8$ & $2.2\times10^{-13}$\\
+P5 & $0.0802$ & $48.8$ & $85.5$ & $94.9$ & $1.5\times10^{-13}$\\
+P6 & $0.0303$ & $48.0$ & $87.7$ & $97.3$ & $2.0\times10^{-13}$\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Table~\ref{tab:dirsweep} reports the result. Three observations follow. The median
+error of the six-dimensional inversion is between $47.7$ and $49.5\,\%$ at every
+pose, and roughly half of all push directions incur an error above $50\,\%$, so
+the failure is not confined to a special direction or a special posture. The
+point-contact inversion is exact to $4\times10^{-13}\,\%$ over all $12\,000$
+directions and all six poses. And the poses span $\sigma_{\min}(\Jv)$ from
+$0.0255$ to $0.0802$ without the six-dimensional error responding, confirming that
+its error is not a conditioning effect.
+
+\begin{figure*}[!t]
+\centering
+\includegraphics[width=0.92\textwidth]{direction_sweep.png}
+\caption{Directional sweep over $12\,000$ push directions at six configurations.
+(a) Relative force error against alignment with the least observable direction:
+the six-dimensional error (red) is a linear function of alignment with correlation
+$0.9993$, while the point-contact error (blue) lies at zero. (b) Error
+distributions of the six-dimensional inversion at each pose, which coincide,
+showing the effect is a property of the architecture rather than of a posture.}
+\label{fig:dirsweep}
+\end{figure*}
+
+Fig.~\ref{fig:dirsweep} confirms the mechanism quantitatively. Pooling the
+$12\,000$ directions, the median six-dimensional error grows monotonically with
+alignment, from $9.8\,\%$ below $|\cos\theta|=0.2$ to $94.8\,\%$ above $0.95$, and
+the correlation between alignment and error is $0.9993$. The geometric explanation
+is therefore not an interpretation placed on the numbers after the fact: it
+accounts for essentially all of the variance.
+
+\begin{remark}[Scope of the correlation]
+The least observable direction is obtained from $\Pff$, that is from the same
+model that produces the error, so the correlation of $0.9993$ should be read for
+what it is: evidence that a single scalar function of the push direction predicts
+the error, not an independent confirmation. What it excludes is that the error
+depends on magnitude, on posture, or on conditioning, all of which are varied
+across the sweep without affecting it. An independent test would identify the
+least observable direction empirically on hardware and check that it coincides
+with the one $\Pff$ predicts.
+\end{remark}
+
+% =========================================================================
+\section{Estimation Under Velocity-Level Actuation}
+\label{sec:velocity}
+% =========================================================================
+
+The residual \eqref{eq:residual} is written in torque, while the actuator accepts
+velocity. This section shows that the mismatch is apparent, that velocity-level
+actuation in fact simplifies the estimation problem, and that it changes both the
+error budget and the nature of the compliance obtained.
+
+Remark~\ref{rem:kv} already established the structural point: the residual uses
+$\tauact$ as measured through the effort channel, so the servo gain $k_v$ does not
+enter the estimator and the inner loop need not be identified. What must be known
+is the map from reported current to torque, which is a calibration rather than a
+system identification. The remainder of this section works out the quantitative
+consequences.
+
+\subsection{Where the interaction signal appears}
+\label{sec:velocity-signal}
+Simulating the plant \eqref{eq:velplant} under a $6$~N push at
+$\bm q_{\text{task}}$, and holding $\bm u=\bm 0$ so that the servo attempts to
+keep the arm still, the residual \eqref{eq:residual} splits between its inertial
+term $\bm M\ddot{\bm q}$ and its actuator term $\bm h-\tauact$ as reported in
+Table~\ref{tab:velocity}.
+
+\begin{table}[!t]
+\caption{Distribution of the residual as a function of velocity-loop stiffness,
+for a $6$~N push.}
+\label{tab:velocity}
+\centering
+\footnotesize
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{ccccc}
+\toprule
+$k_v$ & $\norm{\bm M\ddot{\bm q}}$ & $\norm{\bm h-\tauact}$
+& in $\tauact$ & displacement\\
+\midrule
+$1$   & $0.0175$   & $1.337$ & $98.7\,\%$  & $200$~mm\\
+$4$   & $0.0018$   & $1.370$ & $99.9\,\%$  & $43$~mm\\
+$20$  & $0.0001$   & $1.301$ & $100.0\,\%$ & $8$~mm\\
+$100$ & $\approx0$ & $1.289$ & $100.0\,\%$ & $1.6$~mm\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+For any realistic loop gain the force appears almost entirely in $\tauact$. The
+servo rejects the disturbance, the arm barely moves, and the interaction is
+expressed as the torque the actuator must produce in order not to move. Two
+consequences follow, and they redirect the engineering effort in a way that is not
+obvious beforehand.
+
+First, the finite-differenced acceleration, normally the delicate quantity in a
+residual observer, becomes irrelevant: it carries $0.006\,\%$ of the signal.
+Effort spent filtering encoder differences is misplaced on this platform.
+
+Second, the entire error budget transfers to the current-to-torque calibration,
+where sensitivity is one to one: a $5\,\%$ error in the torque constant produces a
+$5\,\%$ error in force. A torque offset is milder, $0.05\,\mathrm{N}\cdot\mathrm{m}$
+per joint producing $3.7\,\%$.
+
+\subsection{Detection floor}
+Combining Section~\ref{sec:velocity-signal} with \eqref{eq:noise} gives the
+smallest force distinguishable from residual error. A residual error of
+$0.01\,\mathrm{N}\cdot\mathrm{m}$ corresponds to $0.20$~N at the median posture,
+$0.79$~N at the fifth percentile of $\sigma_{\min}(\Jv)$, and is unusable at the
+worst posture. Since the dominant term on a small geared servo is stiction, of
+order $0.05\,\mathrm{N}\cdot\mathrm{m}$, the expected floor is one to two newtons
+at a typical posture. This is adequate for hand guiding with pushes of five to
+fifteen newtons, and it is the quantity that governs the design.
+
+\subsection{Two compliance regimes}
+\label{sec:velocity-regimes}
+Because the servo behaves as a velocity source, the arm does not yield under a
+push of its own accord, and compliance must be produced by displacing the
+reference: sense, move the reference, track. This synthetic compliance is limited
+by loop latency rather than by any physical property.
+
+That description is only half correct, and the missing half is favorable. The
+actuator torque is bounded, so the force the arm can exert is bounded as well.
+Sweeping $729$ configurations and evaluating the worst direction at each,
+subject to $|\tau_i|\le1.4\,\mathrm{N}\cdot\mathrm{m}$ and supporting the arm's own
+weight, the maximum exertable force has median $5.88$~N, fifth percentile
+$4.29$~N, and minimum $3.93$~N. Manual guidance requires five to fifteen newtons.
+The interaction therefore has two regimes:
+
+\begin{itemize}[leftmargin=*]
+\item \emph{Below roughly $4$ to $6$~N.} The servo resists, the arm barely moves,
+and compliance is synthetic. Loop latency governs how the interaction feels.
+\item \emph{Above that threshold.} The actuator saturates and the arm is displaced
+until it reaches a posture where it can hold the load. Compliance is physical and
+obtained for free.
+\end{itemize}
+
+The transition between the two is not a matter of interpretation. It has a
+measurable signature: below the threshold the arm follows the reference the
+admittance commands, while above it the actuator saturates and the arm is carried
+further than commanded. Table~\ref{tab:regimes} reports the ratio of actual to
+commanded end-effector displacement in the closed compliant loop under pushes of
+increasing magnitude.
+
+\begin{table}[!t]
+\caption{The two compliance regimes. Steady-state end-effector displacement,
+actual versus commanded by the admittance, under a push of increasing magnitude.}
+\label{tab:regimes}
+\centering
+\footnotesize
+\setlength{\tabcolsep}{5pt}
+\begin{tabular}{ccccc}
+\toprule
+$\norm{\bm f}$ [N] & commanded [mm] & actual [mm] & ratio & saturated steps\\
+\midrule
+$1$  & $8.3$   & $8.6$   & $1.03$ & $0\,\%$\\
+$3$  & $24.8$  & $23.7$  & $0.95$ & $0\,\%$\\
+$5$  & $41.4$  & $37.8$  & $0.91$ & $0\,\%$\\
+\midrule
+$6$  & $49.7$  & $86.0$  & $1.73$ & $100\,\%$\\
+$8$  & $66.2$  & $124.5$ & $1.88$ & $98\,\%$\\
+$10$ & $82.8$  & $162.3$ & $1.96$ & $98\,\%$\\
+$15$ & $124.1$ & $207.8$ & $1.67$ & $99\,\%$\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The transition falls between $5$ and $6$~N, in agreement with the actuator capability
+computed independently above, and the two indicators change together: the ratio
+departs from unity exactly where the saturated fraction goes from none to all.
+
+The arm is thus naturally backdrivable in the regime of interest, which is a
+safety property rather than a deficiency, and the synthetic loop only has to cover
+fine guidance and the return to task. Two practical consequences follow. The
+latency requirement on the control loop is milder than a purely synthetic analysis
+would suggest, since above the threshold the physics yields without waiting for
+the loop. And actuator sizing becomes a compliance design variable: choosing a
+servo whose force capability falls below the expected interaction range confers
+intrinsic backdrivability with no control effort at all.
+
+\begin{remark}[The estimator does not saturate]
+One might expect the estimate to saturate together with the actuator. It does not.
+Under a force ramp with $|\tau_i|\le1.4\,\mathrm{N}\cdot\mathrm{m}$ the estimate
+remains exact across the range, returning $1.000$, $5.999$, and $13.998$~N for
+applied magnitudes of $1$, $6$, and $14$~N, an error of $0.0\,\%$ throughout. The
+reason is that the residual \eqref{eq:residual} contains both terms: when the
+actuator can no longer hold, the arm accelerates and redistributes its posture,
+and the balance shifts from $\tauact$ towards $\bm M\ddot{\bm q}$ and towards a
+configuration in which the load can be supported. The formulation captures both
+regimes without modification.
+\end{remark}
+
+% =========================================================================
+\section{Compliant Control}
+\label{sec:control}
+% =========================================================================
+
+\subsection{Admittance in $\sethree$}
+The estimated contact force drives a first-order admittance that displaces the
+reference pose from the nominal task pose, with a return spring that restores it
+when contact ceases,
+\begin{equation}
+\bm D\,\bm\nu = \hat{\bm f}_{3} - k\,\bm e_{\mathrm{task}},
+\label{eq:admittance}
+\end{equation}
+where $\bm\nu$ is the reference twist, $\bm D$ collects translational and
+rotational damping, $k$ is the return stiffness, and $\bm e_{\mathrm{task}}$ is the
+displacement of the reference from the task pose. The twist is integrated on the
+dual quaternion reference directly, so translation and rotation remain one object.
+
+\subsection{Dual quaternion predictive controller}
+A nonlinear predictive controller tracks the compliant reference. The state is
+$\bm x=[\bm q^{\!\top}\ \dot{\bm q}^{\!\top}]^{\!\top}\in\R^8$, the input is joint
+torque, and the servo receives the predicted velocity $\dot{\bm q}^\star_1$, which
+matches its native command mode. The optimal control problem is
+\begin{equation}
+\begin{aligned}
+\min_{\bm x,\bm\tau}\quad
+&\sum_{k=0}^{N-1}\norm{\bm y_k}^2_{\bm W}+\norm{\bm y_N}^2_{\bm W_N}\\
+\mathrm{s.t.}\quad
+&\bm x_0=\hat{\bm x},\qquad \bm x_{k+1}=\bm\Phi(\bm x_k,\bm\tau_k),\\
+&\bm q_{\min}\le\bm q_k\le\bm q_{\max},\quad
+\norm{\dot{\bm q}_k}_\infty\le\dot q_{\max},\\
+&\norm{\bm\tau_k}_\infty\le\tau_{\max},
+\end{aligned}
+\label{eq:ocp}
+\end{equation}
+with residual $\bm y=[\bm e^{\!\top}\ \dot{\bm q}^{\!\top}\ \bm\tau^{\!\top}]^{\!\top}$
+built on \eqref{eq:logdual}, and $\bm\Phi$ the discretized dynamics \eqref{eq:dyn}
+with $\bm F=\bm 0$, since the interaction enters through the reference rather than
+the prediction model. The horizon is $N=20$ nodes over $1.0$~s.
+
+\subsection{Which model should the controller use?}
+\label{sec:whichmodel}
+Formulation \eqref{eq:ocp} takes torque as the decision variable while the
+actuator accepts velocity, so the predicted velocity is passed to the servo. This
+is the customary arrangement, but on velocity-actuated hardware it is not the only
+one, and the alternatives differ in what they require the designer to know. We
+implemented and compared three.
+
+\begin{itemize}[leftmargin=*]
+\item \textbf{T}, torque level: $\bm x=[\bm q,\dot{\bm q}]$, $\bm u=\bm\tau$, the
+dynamics \eqref{eq:dyn}, with $\dot{\bm q}^\star_1$ sent to the servo. Requires
+$\bm M$ and $\bm h$. Does not require $k_v$.
+\item \textbf{V1}, dynamic velocity level: $\bm x=[\bm q,\dot{\bm q}]$, $\bm u$ the
+velocity command, the plant \eqref{eq:velplant}. Requires $\bm M$, $\bm h$
+\emph{and} $k_v$, that is, identification of the servo loop.
+\item \textbf{V0}, kinematic: $\bm x=[\bm q]$, $\bm u$ the velocity command,
+$\dot{\bm q}=\bm u$, the limit of \eqref{eq:velplant} as $k_v\to\infty$. Requires
+nothing: no inertia, no bias term, no servo gain.
+\end{itemize}
+
+\begin{table}[!t]
+\caption{Controller formulations under velocity-level actuation. Regulation to a
+fixed pose from an initial error of $0.16$~m, on the plant \eqref{eq:velplant}
+with torque saturation.}
+\label{tab:formulations}
+\centering
+\footnotesize
+\setlength{\tabcolsep}{3.5pt}
+\begin{tabular}{lccccc}
+\toprule
+ & $n_x$ & needs $\bm M,\bm h$ & needs $k_v$ & error [mm] & ms/solve\\
+\midrule
+T  & $8$ & yes & no  & $0.180$ & $2.60$\\
+V1 & $8$ & yes & \textbf{yes} & \emph{fails} & $2.67$\\
+V0 & $4$ & no  & no  & $\bm{0.122}$ & $\bm{0.086}$\\
+\bottomrule
+\end{tabular}
+\vspace{2pt}
+\\{\footnotesize Error after settling; V0 with command weight tuned. V1 returns
+\texttt{NAN\_DETECTED} at every solve, see text.}
+\end{table}
+
+Table~\ref{tab:formulations} reports the comparison, and the outcome is not the
+expected one.
+
+\emph{V1 is ill-posed.} Every solve fails. The cause is instructive rather than
+numerical: with a proportional loop model, sustaining a velocity requires a
+persistent velocity error, so imposing the true actuator bound
+$|k_v(u_i-\dot q_i)|\le\tau_{\max}$ restricts the command to
+$|u_i|\le\tau_{\max}/k_v=0.07$~rad/s, which is $85$ times below the
+$5.969$~rad/s the servo actually reaches. Omitting the bound is worse, since the
+model then admits torques of $239\,\mathrm{N}\cdot\mathrm{m}$, two orders of
+magnitude beyond the actuator, and the integrator diverges. The defect is the
+model structure: the real servo loop has integral action, so no persistent torque
+is needed to hold a velocity. Formulating V1 correctly therefore requires
+identifying not only a gain but the loop architecture including anti-windup, which
+is precisely the burden the other two formulations avoid.
+
+\emph{V0 needs no model at all and is not worse.} Once the command weight is
+tuned it settles to $0.122$~mm against $0.180$~mm for T, at $0.086$~ms per solve,
+a factor of thirty faster, with no failures. Its state is half the size and it
+uses neither the inertia matrix nor the bias term.
+
+This yields a clean separation of concerns, which we regard as the practical
+recommendation of this paper:
+
+\begin{quote}
+\emph{On a velocity-actuated arm the dynamic model is required by the
+\textbf{estimator} and by nothing else. The controller can be model-free.}
+\end{quote}
+
+The estimator needs $\bm M$ and $\bm h$ to form the residual \eqref{eq:residual},
+and by Remark~\ref{rem:kv} it needs no knowledge of the servo loop. The controller
+needs neither. The only quantities to be identified on hardware are therefore the
+kinematics, the mass properties, and the current-to-torque constant, all of which
+serve estimation, and none of which serve control.
+
+\begin{remark}[What V0 gives up]
+The kinematic formulation cannot express torque bounds, so it cannot by itself
+prevent commands the actuator will not follow. Two considerations make this
+acceptable here. The velocity bound is retained and is the binding limit in normal
+operation, and by Section~\ref{sec:velocity-regimes} exceeding the torque bound
+does not produce a fault but the physically compliant regime, in which the arm
+yields. If a hard torque bound is required, for instance to protect a payload, the
+static requirement $\norm{\bm h(\bm q)+\Jv^{\!\top}\hat{\bm f}}_\infty\le\tau_{\max}$
+can be imposed on V0 as a state constraint without reintroducing $k_v$.
+\end{remark}
+
+Table~\ref{tab:formulations} compares the three under regulation. The claim that
+the controller can be model-free is stronger than a regulation test, however, so
+Section~\ref{sec:res-model} repeats the complete compliant interaction loop with
+V0 in place of T.
+
+Problem \eqref{eq:ocp} is transcribed with CasADi~\cite{andersson2019casadi} and
+solved by the real-time iteration scheme~\cite{diehl2005rti} in
+acados~\cite{verschueren2022acados}, with HPIPM~\cite{frison2020hpipm}, a
+Gauss-Newton Hessian, and a fourth-order explicit Runge-Kutta integrator.
+
+Because $n=4$, a general $\SEthree$ reference is unreachable and the optimizer
+settles on a compromise between orientation and translation error. Which
+compromise it selects is decided by the metric, which is what
+$\bm J_\ell^{-1}$ in \eqref{eq:logdual} supplies;
+Section~\ref{sec:res-ablation} isolates its contribution.
+
+\subsection{Real-time implementation}
+\label{sec:realtime}
+Reaching real-time rates required one change whose effect is disproportionate to
+its visibility, and which we report because the failure mode is easy to reach and
+hard to diagnose.
+
+In an initial implementation the symbolic model was assembled with the
+graph-valued expression type of CasADi and the forward dynamics written as
+$\ddot{\bm q}=\mathrm{solve}(\bm M,\bm\tau-\bm h)$. On graph-valued operands this
+does not produce a closed-form expression: it emits a node backed by a numerical
+QR factorization, whose derivatives are obtained by implicit differentiation of
+the linear system and which cannot be expanded to scalar form. With a four-stage
+explicit integrator propagating sensitivities across twenty nodes, that routine is
+evaluated approximately eighty times per solve. The measured cost was $101.6$~ms,
+of which $101.5$~ms was linearization and $0.13$~ms the quadratic program: the
+optimizer was never the bottleneck.
+
+Rebuilding the identical model on the scalar expression type turns the linear
+solve into symbolic Gaussian elimination and yields flat generated code, with the
+timings of Table~\ref{tab:timing}. The controller is unchanged: over a $250$-step
+closed-loop trajectory the two implementations agree to
+$2.2\times10^{-15}\,\mathrm{N}\cdot\mathrm{m}$ in commanded torque and
+$3.1\times10^{-15}$ in state.
+
+\begin{table}[!t]
+\caption{Solve time over $1949$ consecutive solves. $N=20$, $n_x=8$, $n_u=4$.}
+\label{tab:timing}
+\centering
+\footnotesize
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{lccc}
+\toprule
+build & mean [ms] & max [ms] & rate [Hz]\\
+\midrule
+graph-valued, closed loop & $95.4$ & $104.9$ & $10$\\
+scalar, run 1 & $2.53$ & $3.27$ & $395$ / $306$\\
+scalar, run 2 & $2.97$ & $5.19$ & $337$ / $193$\\
+\bottomrule
+\end{tabular}
+\vspace{2pt}
+\\{\footnotesize Rate given as mean / worst case.}
+\end{table}
+
+% =========================================================================
+\section{Results}
+\label{sec:results}
+% =========================================================================
+
+Estimation is reported first against an analytic plant, where ground truth is
+exact, and then against MuJoCo, which provides an independent implementation of
+the dynamics including effects absent from \eqref{eq:dyn}.
+
+\subsection{Force estimation in closed loop}
+\label{sec:res-estimation}
+A hand-guiding scenario is simulated at $100$~Hz. The arm holds a task pose, an
+external force follows a trapezoidal profile, and the compliant loop runs
+throughout. Both estimators are computed from the \emph{same} residual at every
+step, so the only difference is the assumed contact model. Two push directions are
+used: one in the plane of the arm and one normal to it, the latter being the
+direction identified in Section~\ref{sec:sweep}.
+
+\begin{table}[!t]
+\caption{Closed-loop estimation from an identical residual under two contact
+models.}
+\label{tab:mil}
+\centering
+\footnotesize
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{llccc}
+\toprule
+push & estimator & RMSE [N] & corr. & error\\
+\midrule
+in plane                & six-dim. & $0.024$ & $1.0000$ & $0.1\,\%$\\
+$\norm{\bm f}=6.325$~N  & point    & $0.008$ & $1.0000$ & $0.0\,\%$\\
+\midrule
+normal                  & six-dim. & $4.832$ & $0.8069$ & $83.4\,\%$\\
+$\norm{\bm f}=6.000$~N  & point    & $0.007$ & $1.0000$ & $0.0\,\%$\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{figure*}[!t]
+\centering
+\includegraphics[width=0.92\textwidth]{interaction_traces.png}
+\caption{Closed-loop interaction under a $6$~N push applied at four angles out of
+the plane of the arm. (a) Error of the point-contact estimate. It stays below
+$13$~mN, that is under $0.25\,\%$ of the applied force, at every angle including
+the one the six-dimensional inversion cannot recover; the residual excursions
+coincide with the ramps of the force profile and are the discretization floor of
+the benchmark rather than a directional effect. (b) The resulting compliant
+behavior: the arm yields by $45$ to $55$~mm under the push and returns towards the
+task pose on release, at every angle. The directional dependence of the two
+inversions is reported in Table~\ref{tab:threedirs}.}
+\label{fig:traces}
+\end{figure*}
+
+Table~\ref{tab:mil} and Fig.~\ref{fig:traces} report the outcome. For the in-plane
+push both estimators are accurate, which is the regime in which the conventional
+inversion has historically been validated. For the normal push the
+six-dimensional inversion is wrong by $83.4\,\%$ while the point-contact inversion
+remains exact to the discretization floor of the benchmark. In both cases the
+compliant loop yields under the push and returns on release, with the solver
+reporting success at all $350$ steps.
+
+Table~\ref{tab:threedirs} states the same result without reference to any angle,
+for three directions that name themselves, at four configurations. A push along
+the arm or along the base axis lies in the plane of the arm and both inversions
+recover it. A push normal to that plane is recovered in full by the point-contact
+inversion and largely converted into a moment by the six-dimensional one, at every
+configuration tested.
+
+\begin{table}[!t]
+\caption{Recovered force for three physically named push directions, as a
+percentage of the applied magnitude. The point-contact inversion returns
+$100.0\,\%$ in every entry of the table.}
+\label{tab:threedirs}
+\centering
+\footnotesize
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{lcccc}
+\toprule
+& \multicolumn{3}{c}{six-dimensional inversion [\%]} & spurious moment\\
+\cmidrule(lr){2-4}
+pose & along the arm & vertical & out of plane & out of plane\\
+\midrule
+P1 & $99.9$ & $100.0$ & $\bm{6.8}$  & $0.20$\\
+P2 & $98.5$ & $100.0$ & $\bm{17.3}$ & $0.06$\\
+P3 & $99.8$ & $100.0$ & $\bm{6.7}$  & $0.18$\\
+P4 & $97.3$ & $100.0$ & $\bm{23.2}$ & $0.04$\\
+\bottomrule
+\end{tabular}
+\vspace{2pt}
+\\{\footnotesize \emph{along the arm}: radial direction of the end-effector;
+\emph{vertical}: base axis; both lie in the plane of the arm.
+\emph{out of plane}: normal to that plane. Moment in
+$\mathrm{N}\cdot\mathrm{m}$ per newton applied.}
+\end{table}
+
+\subsection{Validation against an independent engine}
+Replacing the analytic plant with MuJoCo and applying a known external force gives
+a check that does not share the implementation of the dynamics. At the push peak
+the applied force is $[0.00,\ 4.00,\ -1.50]$~N; the six-dimensional inversion
+returns $[0.59,\ 0.23,\ -0.83]$~N and the point-contact inversion
+$[0.21,\ 3.92,\ -1.31]$~N. Over the push window the RMSE against the applied force
+falls from $2.227$~N to $0.157$~N, a factor of fourteen.
+
+\begin{remark}[Interpretation of the residual error]
+The remaining $0.157$~N is not estimator error, since the same estimator is exact
+to $10^{-15}$ on the analytic plant. It is the model-to-engine gap: joint damping
+and friction, the discrete constraint solver, and effects not represented in
+\eqref{eq:dyn}. It is the best available proxy for hardware degradation and should
+be read as a lower bound.
+\end{remark}
+
+\begin{remark}[Correlation is not accuracy]
+In the same experiment the six-dimensional estimate correlates with ground truth
+at $0.997$ while carrying the $2.227$~N error. Correlation measures shape and is
+insensitive to gain, so an agreement metric of this kind can appear healthy while
+the quantity of interest is substantially wrong.
+\end{remark}
+
+\subsection{The compliant loop without a dynamic model}
+\label{sec:res-model}
+Section~\ref{sec:whichmodel} argued from a regulation test that the controller need
+not carry a dynamic model. We repeat here the complete interaction loop of
+Section~\ref{sec:res-estimation}, identical in every respect except that the
+kinematic controller V0 replaces the torque-level controller T. The estimator is
+unchanged and retains the dynamic model, which it requires.
+
+\begin{table}[!t]
+\caption{Complete compliant loop with a model-based controller (T) and a
+model-free controller (V0). The estimator is identical in both.}
+\label{tab:v0loop}
+\centering
+\footnotesize
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{llcccc}
+\toprule
+push & ctrl & force RMSE [N] & yield [mm] & return [mm] & ms/solve\\
+\midrule
+in plane & T  & $0.0299$ & $127.1$ & $11.23$ & $2.98$\\
+         & V0 & $0.0332$ & $130.7$ & $\bm{9.24}$ & $\bm{0.119}$\\
+\midrule
+normal   & T  & $0.0042$ & $23.0$  & $3.71$  & $3.05$\\
+         & V0 & $0.0045$ & $28.7$  & $\bm{1.92}$ & $\bm{0.123}$\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Table~\ref{tab:v0loop} reports the outcome. Force estimation is unaffected, as it
+must be, since the estimator did not change. The compliant behavior is equivalent:
+the arm yields comparably under the push and returns closer to the task pose on
+release, in both push directions. The computational cost falls by a factor of
+twenty-five. Carrying the inertia matrix and the bias term in the controller
+therefore buys nothing on this platform, while carrying them in the estimator is
+unavoidable.
+
+\subsection{Robustness to servo noise}
+\label{sec:res-noise}
+Every result reported so far is noise-free, and on a clean bench an exact
+estimator looks perfect by construction. We therefore evaluate both inversions
+under the noise the MX-28R actually delivers: current quantization at
+$3.36$~mA per count, Coulomb stiction of $0.05\,\mathrm{N}\cdot\mathrm{m}$ per
+joint with random sign, which Section~\ref{sec:res-sens} identifies as the
+dominant term, and twelve-bit encoder quantization.
+Configurations are drawn uniformly over the joint ranges and contact forces
+uniformly between $2$ and $10$~N, over $2000$ trials per condition.
+
+\begin{table}[!t]
+\caption{Monte Carlo under servo noise, $N=2000$. Relative force error, as a
+percentage of the applied magnitude.}
+\label{tab:noise}
+\centering
+\footnotesize
+\setlength{\tabcolsep}{3.5pt}
+\begin{tabular}{lcccccc}
+\toprule
+& \multicolumn{3}{c}{six-dimensional} & \multicolumn{3}{c}{point contact}\\
+\cmidrule(lr){2-4}\cmidrule(lr){5-7}
+noise & median & p90 & p99 & median & p90 & p99\\
+\midrule
+none          & $47.2$  & $86.8$  & $97.9$   & $\bm{0.0}$  & $\bm{0.0}$  & $\bm{0.0}$\\
+nominal       & $69.6$  & $149.1$ & $1623$   & $\bm{18.0}$ & $\bm{58.9}$ & $\bm{353}$\\
+$\times2$     & $89.3$  & $281.2$ & $3194$   & $\bm{35.9}$ & $\bm{118.3}$& $\bm{695}$\\
+$\times4$     & $137.3$ & $548.4$ & $6239$   & $\bm{71.9}$ & $\bm{232.8}$& $\bm{1402}$\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Table~\ref{tab:noise} reports the outcome, and it is the honest expectation for
+hardware. The point-contact inversion is no longer exact: its median relative
+error is $18.0\,\%$ under nominal noise, against $69.6\,\%$ for the
+six-dimensional one. The advantage is preserved at every percentile and under
+degraded noise, but both distributions have heavy tails, which the conditioning
+analysis of Section~\ref{sec:estimation} predicts and the next experiment
+confirms.
+
+\begin{table}[!t]
+\caption{Effect of rejecting ill-conditioned postures, nominal noise.}
+\label{tab:gating}
+\centering
+\footnotesize
+\setlength{\tabcolsep}{5pt}
+\begin{tabular}{ccccc}
+\toprule
+& \multicolumn{2}{c}{six-dimensional} & \multicolumn{2}{c}{point contact}\\
+\cmidrule(lr){2-3}\cmidrule(lr){4-5}
+$\sigma_{\min}(\Jv)$ threshold & median & p90 & median & p90\\
+\midrule
+$0.00$ & $69.6$ & $142.4$ & $18.0$ & $61.3$\\
+$0.02$ & $70.8$ & $156.2$ & $16.2$ & $42.5$\\
+$0.04$ & $69.0$ & $146.0$ & $14.5$ & $36.2$\\
+$0.06$ & $77.7$ & $227.8$ & $\bm{12.4}$ & $\bm{29.5}$\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Table~\ref{tab:gating} discriminates between the two error mechanisms. Rejecting
+postures below a threshold on $\sigma_{\min}(\Jv)$ halves the ninetieth percentile
+of the point-contact estimator, from $61\,\%$ to $30\,\%$, exactly as
+\eqref{eq:noise} predicts for an error that is amplified measurement noise. It
+does nothing for the six-dimensional inversion, whose error is not noise but
+structural misattribution and therefore cannot be gated away. The two mechanisms
+identified analytically in Section~\ref{sec:estimation} are thus separable
+experimentally, and monitoring $\sigma_{\min}(\Jv)$ online becomes an actionable
+recommendation with a measured benefit.
+
+\subsection{Sensitivity to model and calibration error}
+\label{sec:res-sens}
+Section~\ref{sec:velocity} places the error budget on the current-to-torque
+calibration, and Section~\ref{sec:res-noise} shows stiction dominating the noise.
+Both statements can be made precise by perturbing the validated model one
+parameter at a time and recording the spurious force the estimator then reports
+under no contact, which is the quantity a deployment would have to distinguish
+from a real interaction. Table~\ref{tab:faults} reports it at the worst of six
+configurations selected by sweeping the workspace for maximum sensitivity.
+
+\begin{table}[!t]
+\caption{Spurious force reported under no contact when a single model or
+calibration parameter is perturbed, at the most sensitive of six configurations.}
+\label{tab:faults}
+\centering
+\footnotesize
+\setlength{\tabcolsep}{5pt}
+\begin{tabular}{lc}
+\toprule
+perturbation & spurious $\norm{\hat{\bm f}_{3}}$ [N]\\
+\midrule
+inverted torque sign            & $7.38$\\
+torque constant $\times2$       & $3.69$\\
+torque offset $0.05\,\mathrm{N}\cdot\mathrm{m}$ & $1.66$\\
+stiction $0.05\,\mathrm{N}\cdot\mathrm{m}$      & $0.90$\\
+torque constant $+20\,\%$       & $0.74$\\
+torque offset $0.02\,\mathrm{N}\cdot\mathrm{m}$ & $0.67$\\
+link 4 mass $+20\,\%$           & $0.42$\\
+joint zero shifted $0.10$~rad   & $0.33$\\
+torque constant $+5\,\%$        & $0.19$\\
+link 3 mass $+20\,\%$           & $0.24$\\
+link 1 mass $+20\,\%$           & $0.00$\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Two features of Table~\ref{tab:faults} matter for deployment. Torque offsets
+dominate: $0.02\,\mathrm{N}\cdot\mathrm{m}$ already produces $0.67$~N, whereas a
+$20\,\%$ error in a link mass produces $0.42$~N and a $5\,\%$ error in the torque
+constant only $0.19$~N. The asymmetry is geometric. A gravity error lies in the
+well-conditioned directions of $\Jv$ and is largely absorbed by the least-squares
+projection of \eqref{eq:threesol}, whereas an offset is not, which is why stiction
+rather than mass modeling sets the floor. The estimate is also insensitive to the
+mass of the first link, correctly so, since that link rotates about a vertical axis
+and gravity exerts no torque about it.
+
+A practical consequence follows for calibration. Because gravity torques on this
+arm are of order $0.3\,\mathrm{N}\cdot\mathrm{m}$, a no-contact null test cannot
+resolve the torque constant: a $5\,\%$ error in it is indistinguishable from the
+residual bias of a well-modeled arm. The constant must therefore be identified
+under a known load rather than at rest.
+
+\subsection{Compliance versus rigid behavior}
+\label{sec:res-control}
+Six guidance conditions, each a task pose and a guidance direction, were run twice
+in MuJoCo, once compliant and once rigid (Table~\ref{tab:paired}).
+
+\begin{table}[!t]
+\caption{Compliant versus rigid guidance over $N=6$ paired conditions. Both arms
+visit the identical conditions, so the paired difference is the appropriate
+statistic.}
+\label{tab:paired}
+\centering
+\footnotesize
+\setlength{\tabcolsep}{3pt}
+\begin{tabular}{ccccccc}
+\toprule
+& \multicolumn{3}{c}{guidance force [N]} & \multicolumn{3}{c}{following error [mm]}\\
+\cmidrule(lr){2-4}\cmidrule(lr){5-7}
+cond. & rigid & compl. & $\Delta$ & rigid & compl. & $\Delta$\\
+\midrule
+1 & $3.59$ & $1.96$ & $+1.62$ & $44.8$ & $24.5$ & $+20.3$\\
+2 & $4.13$ & $3.68$ & $+0.45$ & $51.6$ & $45.9$ & $+5.7$\\
+3 & $3.12$ & $1.63$ & $+1.49$ & $39.0$ & $20.2$ & $+18.7$\\
+4 & $3.46$ & $1.40$ & $+2.06$ & $43.2$ & $17.4$ & $+25.8$\\
+5 & $3.98$ & $3.02$ & $+0.96$ & $49.7$ & $37.6$ & $+12.1$\\
+6 & $4.62$ & $4.33$ & $+0.29$ & $57.7$ & $54.0$ & $+3.7$\\
+\midrule
+mean & $3.82$ & $2.67$ & $\bm{+1.15}$ & $47.7$ & $33.3$ & $\bm{+14.4}$\\
+s.d. & $0.49$ & $1.09$ & $0.64$ & $6.1$ & $13.6$ & $8.0$\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The design is paired, since both arms visit the identical set of conditions, so
+the between-condition variance is common and cancels in the difference. The paired
+differences are $+1.15\pm0.64$~N in guidance force, giving $t=4.42$, and
+$+14.4\pm8.0$~mm in following error, giving $t=4.43$, against a two-sided critical
+value of $2.571$ at five degrees of freedom, favorable in all six conditions. The
+unpaired summaries, $3.82\pm0.49$~N against $2.67\pm1.09$~N, have overlapping
+dispersions and would not support the claim at $N=6$: the effect is real and the
+unpaired presentation discards the information that establishes it.
+
+\subsection{Tracking, regulation, and computation}
+Regulating to a fixed pose from an initial error of $0.160$~m converges to
+$1.65$~mm with success at all $250$ steps. On a slow screw trajectory the
+controller achieves $6.82$~mm position RMSE (maximum $7.40$~mm) and $4.79^\circ$
+orientation RMSE (maximum $6.35^\circ$). Solve times appear in
+Table~\ref{tab:timing}; we give two runs of the identical build because a single
+timing run is not a measurement, and they differ by $17\,\%$ in the mean and
+$59\,\%$ in the maximum.
+
+\subsection{Ablation of the pose metric}
+\label{sec:res-ablation}
+The logarithm \eqref{eq:logdual} differs from a decoupled error only through
+$\bm J_\ell(\bm\varphi)^{-1}$, and since $\bm J_\ell^{-1}\to\bm I$ as
+$\norm{\bm\varphi}\to0$ the two coincide in the small-error limit; a comparison
+conducted there is a tautology rather than an experiment. The relative difference
+between the two translational errors grows linearly at $0.38\,\%$ per degree of
+orientation error, reaching $1.9\,\%$ at $5^\circ$, $16.9\,\%$ at $45^\circ$, and
+$34.1\,\%$ at $90^\circ$.
+
+We therefore ablate where the metrics genuinely differ. Both controllers receive
+identical cost structure, weights, and solver settings and differ only in the
+residual. The reference orientation is rotated by $\alpha$, rendering the target
+unreachable, which is the normal operating condition of a four-joint arm rather
+than a contrived one; the initial error is large and the transient is included.
+
+\begin{table}[!t]
+\caption{Metric ablation. Steady-state position error under a reference rotated by
+$\alpha$, making it unreachable.}
+\label{tab:ablation}
+\centering
+\footnotesize
+\setlength{\tabcolsep}{5pt}
+\begin{tabular}{cccc}
+\toprule
+$\alpha$ [deg] & coupled [mm] & decoupled [mm] & advantage\\
+\midrule
+$0$  & $1.038$  & $1.050$  & $+1.1\,\%$\\
+$15$ & $1.763$  & $1.779$  & $+0.9\,\%$\\
+$30$ & $2.472$  & $2.492$  & $+0.8\,\%$\\
+$45$ & $3.646$  & $3.691$  & $+1.2\,\%$\\
+$60$ & $6.120$  & $6.220$  & $+1.6\,\%$\\
+$75$ & $10.794$ & $11.020$ & $+2.1\,\%$\\
+$90$ & $17.729$ & $18.246$ & $+2.8\,\%$\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Table~\ref{tab:ablation} reports the result. The coupled metric is superior and
+its advantage grows monotonically with $\alpha$, with orientation error
+indistinguishable and no solver failures. At $\alpha=0$, where the reference is
+reachable, the two tie as predicted, which serves as a positive control.
+
+The effect is real but small. Where the cost functions differ by $34\,\%$ the
+closed loop differs by $2.8\,\%$, because torque saturation and the reachable
+manifold dominate the compromise. We therefore do not advance the dual quaternion
+formulation as a performance claim. Its merit is that it supplies the
+geometrically consistent compromise by construction and at no computational cost,
+both branches requiring $2.48$~ms per solve.
+
+% =========================================================================
+\section{Discussion}
+\label{sec:discussion}
+% =========================================================================
+
+\subsection{Practical implications}
+The correction of Section~\ref{sec:estimation} is inexpensive to adopt. It
+replaces one linear solve with another of smaller dimension and requires no
+additional sensing, calibration, or tuning. For any application in which the
+contact location is known by construction, and hand guiding at the end-effector is
+the archetype, the six-dimensional inversion should not be used on an arm with
+fewer than six joints.
+
+The analysis also reframes the platform. A four-joint arm sensing contact force
+through its own actuators is not operating at the margin of feasibility: by
+Proposition~\ref{prop:exact} it has one measurement more than the problem
+requires. The quantity a designer should examine when placing a task is
+$\sigma_{\min}(\Jv)$, mapped in Fig.~\ref{fig:map}(b), not any index derived from
+the rank deficit of the full Jacobian. Velocity-level actuation, in turn, removes
+the need to identify the servo loop and renders the acceleration term negligible,
+concentrating the design effort on a single calibration.
+
+\subsection{Limitations}
+\emph{Simulation only.} Every number reported here is obtained in simulation. The
+model is exact against MuJoCo to $10^{-10}$ and MuJoCo serves as an independent
+plant, but neither substitutes for the physical arm. Two quantities are expected
+to degrade on hardware: the actuator-torque proxy from servo current, which
+carries stiction and gearbox losses absent from \eqref{eq:dyn}, and the
+finite-differenced acceleration, which will be noisier, although
+Section~\ref{sec:velocity} shows the latter matters little. The $0.157$~N
+model-to-engine gap is the best available proxy and is a lower bound.
+
+\emph{Known contact point.} As stated in Remark~\ref{rem:cost}, the point-contact
+model requires the contact location. Contact along the links, or contact
+transmitting a moment through a grasped object, lies outside the analysis.
+
+\emph{Conditioning near singularities.} Although $\mathrm{rank}\,\Jv=3$ throughout
+the sampled workspace, $\sigma_{\min}(\Jv)$ reaches $7.6\times10^{-5}$, where
+\eqref{eq:noise} predicts severe amplification. A deployment should monitor
+$\sigma_{\min}(\Jv)$ online, which is inexpensive, and either avoid those postures
+or widen the admittance dead band there.
+
+\emph{Friction is not observed by either route.} The servo current measures motor
+torque upstream of the gearbox, so gearbox friction is unmodeled whether the
+applied torque is read from current or inferred from the velocity loop. This sets
+the irreducible floor and is the quantity most likely to dominate on hardware.
+
+\emph{Statistical scope.} The compliance result rests on six paired conditions in a
+single simulator, and the timing figures vary by $17\,\%$ between two runs of an
+identical build. We report both rather than the more favorable one.
+
+% =========================================================================
+\section{Conclusion}
+\label{sec:conclusion}
+% =========================================================================
+
+On manipulators with fewer actuated joints than task dimensions, the accuracy of
+sensorless interaction sensing is governed by the contact model the estimator
+assumes rather than by the rank of the Jacobian. Inverting the momentum residual
+for a full six-dimensional wrench is under-determined and silently converts
+contact force into spurious moment, discarding $50.5\,\%$ of the applied force on
+average over the workspace studied and up to $99.6\,\%$. Committing to a point
+contact at a known location renders the problem over-determined, and the force is
+recovered exactly whenever $\mathrm{rank}\,\Jv=3$, which holds in $100\,\%$ of the
+sampled workspace, leaving numerical conditioning as the binding limitation.
+Against an independent physics engine the correction improves force RMSE by a
+factor of fourteen.
+
+Velocity-level actuation, commonly regarded as an obstacle to sensorless
+estimation, is instead a simplification. The servo reports the torque it applies,
+so the residual is invariant to the inner loop and no identification of it is
+required; the finite-differenced acceleration carries $0.006\,\%$ of the signal
+and becomes irrelevant; and a kinematic controller matches a model-based one
+throughout the compliant loop at one twenty-fifth of the cost, which confines the
+dynamic model to the estimator. Under realistic servo quantization and stiction
+the corrected estimator attains $18.0\,\%$ median relative error against
+$69.6\,\%$, and gating on $\sigma_{\min}(\Jv)$ halves its tail while leaving the
+six-dimensional error untouched, separating amplified noise from structural
+misattribution. Finally, because the actuator saturates below the force range of
+manual guidance, physical compliance is obtained for free and the synthetic loop
+need only cover fine guidance and the return to task.
+
+Two lines follow. The first is hardware validation, for which
+Section~\ref{sec:res-sens} identifies the decisive measurement: since a no-contact
+null test cannot resolve the torque constant on an arm whose gravity torques are of
+order $0.3\,\mathrm{N}\cdot\mathrm{m}$, the constant must be identified under a
+known load, and the conditioning prediction of \eqref{eq:noise} is then tested by
+repeating that measurement in a well-conditioned and an ill-conditioned posture.
+The second is extending the contact model to an unknown contact location along the
+links, which would restore whole-arm interaction while preserving the dimensional
+argument that makes the approach work.
+
+\section*{Acknowledgment}
+[Acknowledgment text.]
+
+\bibliographystyle{IEEEtran}
+\bibliography{refs}
+
+\EOD
+
+\vfill
+
+\end{document}

@@ -58,7 +58,8 @@ int main(){
 
   /* fuerza "mano" en el efector: +y, -z entre t=1.0s y 2.5s */
   double sum_dot=0,sum_tt=0,sum_ee=0; int ncnt=0;
-  double f_at_peak[3]={0,0,0}, ftrue_peak[3]={0,0,0};
+  double f_at_peak[3]={0,0,0}, f3_at_peak[3]={0,0,0}, ftrue_peak[3]={0,0,0};
+  double e6_acc=0, e3_acc=0; int nerr=0;
   for(int t=0;t<400;t++){
     double x[8]; for(int i=0;i<4;i++){x[i]=d->qpos[qadr[i]]; x[4+i]=d->qvel[dadr[i]];}
     ocp_nlp_constraints_model_set(cfg,dim,in,out,0,"lbx",x);
@@ -90,9 +91,24 @@ int main(){
     double tmp[4]; mju_cholSolve(tmp,L,tau_ext,4);
     double Fest[6]; for(int r=0;r<6;r++){double s=0;for(int a=0;a<4;a++)s+=J[r*4+a]*tmp[a]; Fest[r]=s;}
 
+    /* --- estimador de FUERZA PURA (3D) ---------------------------------------
+       El de arriba resuelve JᵀF = tau con F∈R⁶ desde 4 medidas: indeterminado, y
+       la solucion de norma minima reparte la fuerza como momento. Si el contacto
+       es una fuerza pura en un punto conocido (el efector), el modelo correcto es
+       Jvᵀ f = tau con f∈R³, que es SOBRE-determinado. Ecuaciones normales:
+       (Jv Jvᵀ) f = Jv tau_ext,  Jv = 3x4. */
+    double A[9]; for(int a=0;a<3;a++)for(int b=0;b<3;b++){double s=0;
+      for(int c=0;c<4;c++) s+=J[a*4+c]*J[b*4+c]; A[a*3+b]=s+(a==b?1e-9:0);}
+    double bb[3]; for(int a=0;a<3;a++){double s=0; for(int c=0;c<4;c++) s+=J[a*4+c]*tau_ext[c]; bb[a]=s;}
+    double LA[9]; mju_copy(LA,A,9); mju_cholFactor(LA,3,1e-12);
+    double Fest3[3]; mju_cholSolve(Fest3,LA,bb,3);
+
     if(t>=110 && t<240){ /* ventana estable de empuje: correlacion fuerza y */
       sum_dot+=Fest[1]*Fh[1]; sum_ee+=Fest[1]*Fest[1]; sum_tt+=Fh[1]*Fh[1]; ncnt++;
-      if(t==180){ for(int k=0;k<3;k++){f_at_peak[k]=Fest[k]; ftrue_peak[k]=Fh[k];}
+      for(int k=0;k<3;k++){ e6_acc+=(Fest[k]-Fh[k])*(Fest[k]-Fh[k]);
+                            e3_acc+=(Fest3[k]-Fh[k])*(Fest3[k]-Fh[k]); }
+      nerr++;
+      if(t==180){ for(int k=0;k<3;k++){f_at_peak[k]=Fest[k]; f3_at_peak[k]=Fest3[k]; ftrue_peak[k]=Fh[k];}
         /* proyeccion OBSERVABLE de la fuerza real = lo recuperable = J(JtJ)^-1 Jt F */
         double Ft[6]={Fh[0],Fh[1],Fh[2],Fh[3],Fh[4],Fh[5]};
         double JtF[4]; for(int a=0;a<4;a++){double s=0;for(int r=0;r<6;r++)s+=J[r*4+a]*Ft[r]; JtF[a]=s;}
@@ -111,12 +127,16 @@ int main(){
       }
     }
   }
-  printf("== P1 MuJoCo: estimacion wrench sin sensor vs ground truth ==\n");
-  printf("fuerza mano REAL (pico) = [%.2f %.2f %.2f] N\n", ftrue_peak[0],ftrue_peak[1],ftrue_peak[2]);
-  printf("fuerza ESTIMADA (pico)  = [%.2f %.2f %.2f] N\n", f_at_peak[0],f_at_peak[1],f_at_peak[2]);
+  printf("== P1 MuJoCo: estimacion sin sensor vs ground truth ==\n");
+  printf("fuerza mano REAL (pico)      = [%6.2f %6.2f %6.2f] N\n", ftrue_peak[0],ftrue_peak[1],ftrue_peak[2]);
+  printf("WRENCH-6D min-norm (pico)    = [%6.2f %6.2f %6.2f] N\n", f_at_peak[0],f_at_peak[1],f_at_peak[2]);
+  printf("FUERZA-3D contacto puro(pico)= [%6.2f %6.2f %6.2f] N\n", f3_at_peak[0],f3_at_peak[1],f3_at_peak[2]);
   double corr=sum_dot/(sqrt(sum_ee*sum_tt)+1e-12);
-  printf("corr(F_y est, F_y real) en ventana = %.3f\n", corr);
-  printf("%s\n", (fabs(f_at_peak[1]-ftrue_peak[1])<0.2*fabs(ftrue_peak[1])+0.3)?"ESTIMACION WRENCH MuJoCo OK":"REVISAR");
+  printf("corr(F_y est 6D, F_y real) en ventana = %.3f\n", corr);
+  printf("RMSE contra la fuerza APLICADA (ventana):  6D %.3f N   3D %.3f N\n",
+         sqrt(e6_acc/(3*nerr)), sqrt(e3_acc/(3*nerr)));
+  printf("%s\n", (sqrt(e3_acc/(3*nerr)) < sqrt(e6_acc/(3*nerr)))
+         ? "FUERZA-3D MEJOR QUE 6D EN MuJoCo" : "REVISAR");
   arm4dof_dqnmpc_acados_free(cap); arm4dof_dqnmpc_acados_free_capsule(cap);
   mju_free(jp);mju_free(jr);mju_free(M); mj_deleteData(d); mj_deleteModel(m); return 0;
 }

@@ -1,0 +1,15 @@
+# Coined-term ledger — arm4dof_dqnmpc / IEEE Access
+# formato:  term => replacement   (HARD, bloquea)
+#           [soft] a partir de ahi (advisory)
+
+blind direction => least observable direction
+phantom moment => spurious moment
+sideways push => out-of-plane push
+knee => transition
+lab manual => protocol
+
+[soft]
+recipe
+buys nothing
+smoking gun
+pedantic

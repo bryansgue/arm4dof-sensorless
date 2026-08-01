@@ -1,6 +1,9 @@
-# codigo C generado por acados (regenerable)
+# codigo C generado por acados (regenerable con los generate_*.py)
 c_generated_code_arm_dqnmpc/
 c_generated_code_arm_decoupled/
+c_generated_code_arm_dec_nls/
+c_generated_code_arm_v0/
+c_generated_code_arm_v1/
 acados_ocp_*.json
 
 # python
@@ -13,3 +16,10 @@ results/
 *.log
 *.o
 *.so
+
+# artefactos de compilacion LaTeX (el .pdf y las fuentes del template SI se versionan)
+paper/*.aux
+paper/*.bbl
+paper/*.blg
+paper/*.out
+paper/*.log

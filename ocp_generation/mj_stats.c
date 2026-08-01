@@ -122,5 +122,27 @@ int main(){
   printf("observer corr        --                %5.3f +- %.3f\n", m5,s5);
   printf("-> compliant: %.0f%% menos fuerza, %.0f%% mejor seguimiento (consistente en N=%d)\n",
          100*(1-m2/m1), 100*(1-m4/m3), Ncond);
+
+  /* ── analisis PAREADO ─────────────────────────────────────────────────────
+     Las dos ramas corren la MISMA condicion (misma tarea, misma direccion de
+     guiado), asi que comparar medias sueltas con su std tira informacion y
+     subestima el efecto: la varianza ENTRE condiciones es comun a las dos y se
+     cancela al restar. Lo que corresponde es la distribucion de las DIFERENCIAS. */
+  printf("\n-- por condicion (pareado) --\n");
+  printf("  cond   F_rig   F_com    dF      e_rig   e_com    de\n");
+  double df[6],dt[6];
+  for(int c=0;c<Ncond;c++){
+    df[c]=fS[c]-fC[c]; dt[c]=1000*(tS[c]-tC[c]);
+    printf("  %3d  %7.2f %7.2f %7.2f   %7.1f %7.1f %7.1f\n",
+           c+1, fS[c], fC[c], df[c], 1000*tS[c], 1000*tC[c], dt[c]);
+  }
+  double mdf,sdf,mdt,sdt; stat_mu(df,Ncond,&mdf,&sdf); stat_mu(dt,Ncond,&mdt,&sdt);
+  int wf=0,wt=0; for(int c=0;c<Ncond;c++){ if(df[c]>0)wf++; if(dt[c]>0)wt++; }
+  double tf = mdf/(sdf/sqrt((double)Ncond)), tt = mdt/(sdt/sqrt((double)Ncond));
+  printf("\n  fuerza     : dif media %+.2f +- %.2f N   t=%.2f   favorable en %d/%d\n",
+         mdf,sdf,tf,wf,Ncond);
+  printf("  seguimiento: dif media %+.1f +- %.1f mm  t=%.2f   favorable en %d/%d\n",
+         mdt,sdt,tt,wt,Ncond);
+  printf("  (t critico bilateral 0.05 con %d gl = 2.571)\n", Ncond-1);
   arm4dof_dqnmpc_acados_free(cap); arm4dof_dqnmpc_acados_free_capsule(cap); mj_deleteModel(m); return 0;
 }

@@ -34,11 +34,14 @@ class ArmDQNMPC(Node):
                             "ocp_generation","..","acados_ocp_arm4dof_dqnmpc.json")
         self.solver = AcadosOcpSolver(G.build_ocp(), json_file=json, build=False, generate=False)
 
-        # pesos
+        # pesos. OJO: el OCP es NONLINEAR_LS, asi que el peso NO viaja en p[8:22]
+        # (esos slots quedaron muertos al migrar desde EXTERNAL). Se setean con
+        # cost_set sobre la W del solver; p solo lleva dq_ref en p[0:8].
+        W_se3 = [2., 2., 2., 80., 80., 80.]; W_qd = [0.3]*4; W_u = [0.02]*4
+        for k in range(G.N_HORIZON):
+            self.solver.cost_set(k, "W", np.diag(W_se3 + W_qd + W_u))
+        self.solver.cost_set(G.N_HORIZON, "W", np.diag(W_se3 + W_qd))
         self.W = np.zeros(G.N_PARAMS)
-        self.W[8:14] = np.array([2.,2.,2., 80.,80.,80.])  # W_se3 [rot,trans]
-        self.W[14:18] = 0.3                                # W_qd
-        self.W[18:22] = 0.02                               # W_u
 
         # target inicial (config de juntas -> pose efector)
         tq = self.declare_parameter("target_q", [0.6,1.4,-0.9,0.3]).value
