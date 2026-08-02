@@ -145,5 +145,7 @@ def fig_interaction():
 
 if __name__ == "__main__":
     print("figuras:")
-    fig_metric()
+    # fig_metric() genera metric_ablation.png, que NO se cita en el paper: la
+    # ablacion de la metrica quedo como tabla. Se deja la funcion por si se
+    # quiere volver a figura, pero no se llama.
     fig_interaction()
