@@ -4,7 +4,7 @@ Reusa la cadena de arm_dynamics. Valida vs site_xpos/xquat de MuJoCo (en arm_par
 """
 import numpy as np
 import casadi as ca
-from casadi import MX, vertcat, horzcat, mtimes
+from casadi import SX, vertcat, horzcat, mtimes
 import arm_params as P
 from arm_dynamics import quat2R, axisangle2R
 from dq_math import dq_from_pose, dq_get_position
@@ -19,14 +19,14 @@ def R2quat(R):
 
 def fk_ee_dq(q):
     """q(4) -> (DQ_ee(8), pos(3), quat(4)) del efector (site 'ee' = tip)."""
-    R_prev = quat2R(MX(P.BASE_QUAT)); p_prev = MX(P.BASE_POS)
+    R_prev = quat2R(SX(P.BASE_QUAT)); p_prev = SX(P.BASE_POS)
     for i,L in enumerate(P.LINKS):
-        Rf = quat2R(MX(L['body_quat'])); pf = MX(L['body_pos'])
+        Rf = quat2R(SX(L['body_quat'])); pf = SX(L['body_pos'])
         R_fix = mtimes(R_prev, Rf); p_fix = p_prev + mtimes(R_prev, pf)
-        Rj = axisangle2R(MX(L['jnt_axis']), q[i])
+        Rj = axisangle2R(SX(L['jnt_axis']), q[i])
         R_prev = mtimes(R_fix, Rj); p_prev = p_fix
     # tip (efector) fijo sobre hand
-    Rt = quat2R(MX(P.TIP['body_quat'])); pt = MX(P.TIP['body_pos'])
+    Rt = quat2R(SX(P.TIP['body_quat'])); pt = SX(P.TIP['body_pos'])
     R_ee = mtimes(R_prev, Rt); p_ee = p_prev + mtimes(R_prev, pt)
     quat = R2quat(R_ee)
     dq = dq_from_pose(quat, p_ee)
@@ -35,28 +35,28 @@ def fk_ee_dq(q):
 def jacobian_ee(q):
     """Jacobiano geometrico 6x4 del efector: [Jv; Jw], twist world = J q̇.
     Construccion screw (validada a 4e-17 vs mj_jacSite)."""
-    R_prev = quat2R(MX(P.BASE_QUAT)); p_prev = MX(P.BASE_POS)
+    R_prev = quat2R(SX(P.BASE_QUAT)); p_prev = SX(P.BASE_POS)
     axis_w = []; anch_w = []
     for i,L in enumerate(P.LINKS):
-        Rf = quat2R(MX(L['body_quat'])); pf = MX(L['body_pos'])
+        Rf = quat2R(SX(L['body_quat'])); pf = SX(L['body_pos'])
         R_fix = mtimes(R_prev, Rf); p_fix = p_prev + mtimes(R_prev, pf)
-        axis_w.append(mtimes(R_fix, MX(L['jnt_axis'])))
-        anch_w.append(p_fix + mtimes(R_fix, MX(L['jnt_pos'])))
-        R_prev = mtimes(R_fix, axisangle2R(MX(L['jnt_axis']), q[i])); p_prev = p_fix
-    Rt = quat2R(MX(P.TIP['body_quat'])); p_ee = p_prev + mtimes(R_prev, MX(P.TIP['body_pos']))
-    Jv = MX.zeros(3, NQ); Jw = MX.zeros(3, NQ)
+        axis_w.append(mtimes(R_fix, SX(L['jnt_axis'])))
+        anch_w.append(p_fix + mtimes(R_fix, SX(L['jnt_pos'])))
+        R_prev = mtimes(R_fix, axisangle2R(SX(L['jnt_axis']), q[i])); p_prev = p_fix
+    Rt = quat2R(SX(P.TIP['body_quat'])); p_ee = p_prev + mtimes(R_prev, SX(P.TIP['body_pos']))
+    Jv = SX.zeros(3, NQ); Jw = SX.zeros(3, NQ)
     for j in range(NQ):
         Jw[:, j] = axis_w[j]
         Jv[:, j] = ca.cross(axis_w[j], p_ee - anch_w[j])
     return ca.vertcat(Jv, Jw)   # 6x4
 
 def build_fk_fn():
-    q = MX.sym("q", NQ)
+    q = SX.sym("q", NQ)
     dq, p, quat = fk_ee_dq(q)
     return ca.Function("fk_ee", [q], [dq, p, quat])
 
 def build_jac_fn():
-    q = MX.sym("q", NQ)
+    q = SX.sym("q", NQ)
     return ca.Function("jac_ee", [q], [jacobian_ee(q)])
 
 if __name__ == "__main__":

@@ -41,7 +41,12 @@ class HandGuide(Node):
         self.fM,self.fh=build_dynamics(); self.fk=build_fk_fn(); self.fJ=build_jac_fn()
         json=os.path.join(os.path.dirname(os.path.abspath(__file__)),"ocp_generation","..","acados_ocp_arm4dof_dqnmpc.json")
         self.solver=AcadosOcpSolver(G.build_ocp(),json_file=json,build=False,generate=False)
-        self.W=np.zeros(G.N_PARAMS); self.W[8:14]=[2,2,2,80,80,80]; self.W[14:18]=0.3; self.W[18:22]=0.02
+        # el peso va por cost_set, NO por p[8:22]: el OCP es NONLINEAR_LS y esos slots
+        # quedaron muertos al migrar desde EXTERNAL. p solo lleva dq_ref en p[0:8].
+        W_se3=[2.,2.,2.,80.,80.,80.]; W_qd=[0.3]*4; W_u=[0.02]*4
+        for k in range(G.N_HORIZON): self.solver.cost_set(k,"W",np.diag(W_se3+W_qd+W_u))
+        self.solver.cost_set(G.N_HORIZON,"W",np.diag(W_se3+W_qd))
+        self.W=np.zeros(G.N_PARAMS)
         # tarea
         q_task=np.array(self.declare_parameter("task_q",[0.0,1.2,-0.9,0.4]).value,float)
         _,p0,q0=self.fk(q_task); self.p_task=np.array(p0).flatten(); self.q_task=np.array(q0).flatten()

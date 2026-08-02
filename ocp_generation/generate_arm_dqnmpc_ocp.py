@@ -4,9 +4,9 @@ Genera el codigo C acados para el DQ-NMPC del brazo 4DOF (MX-28).
 Estado x ∈ ℝ⁸ = [q(4), q̇(4)]
 Control u ∈ ℝ⁴ = τ(4)              (interno; salida al servo = q̇*[1] -> Goal_Velocity)
 Dinamica:  q̈ = M(q)⁻¹ (τ − h(q,q̇))   (M,h simbolicos validados vs MuJoCo a 1e-10)
-Costo (EXTERNAL):
+Costo (NONLINEAR_LS, Gauss-Newton):
   e = ln_dual( dq_error(dq_ref, fk_ee_dq(q)) ) ∈ se(3)   (error de pose efector 6D)
-  ℓ = eᵀ W_se3 e + q̇ᵀ W_qd q̇ + uᵀ W_u u
+  y = [e; q̇; τ],   ℓ = ‖y‖²_W   con W en ocp.cost.W (NO en p — ver build_ocp)
 Tarea reducida 4D implicita: 4DOF no alcanza se(3) 6D completo; el optimizador minimiza el
 subespacio alcanzable (rank(J)=4). Dinamica JOINT-SPACE (4×4 bien condicionada) esquiva la
 singularidad de la inercia task-space (rank(J M⁻¹Jᵀ)=4<6).
@@ -19,7 +19,7 @@ Run:  python3 generate_arm_dqnmpc_ocp.py   ->  ../c_generated_code_arm_dqnmpc/
 import os, shutil
 import numpy as np
 import casadi as ca
-from casadi import MX, vertcat, diag
+from casadi import SX, vertcat, diag
 from acados_template import AcadosOcp, AcadosOcpSolver, AcadosModel
 
 import arm_params as P
@@ -48,12 +48,12 @@ def build_arm_model():
     model = AcadosModel()
     model.name = "arm4dof_dqnmpc"
 
-    q  = MX.sym("q", NQ)
-    qd = MX.sym("qd", NQ)
+    q  = SX.sym("q", NQ)
+    qd = SX.sym("qd", NQ)
     x  = vertcat(q, qd)
-    tau = MX.sym("tau", NU)
+    tau = SX.sym("tau", NU)
 
-    p_sym = MX.sym("p", N_PARAMS)
+    p_sym = SX.sym("p", N_PARAMS)
     model.p = p_sym
 
     # dinamica: q̈ = M⁻¹(τ − h)   (ca.solve = mas estable que inv)
@@ -62,7 +62,7 @@ def build_arm_model():
     qdd = ca.solve(M, tau - h)
     f_expl = vertcat(qd, qdd)
 
-    xdot = MX.sym("xdot", NX)
+    xdot = SX.sym("xdot", NX)
     model.x = x
     model.xdot = xdot
     model.u = tau
@@ -80,11 +80,12 @@ def build_ocp():
     ocp.code_export_directory = os.path.join(script_dir, "..", "c_generated_code_arm_dqnmpc")
     ocp.solver_options.N_horizon = N_HORIZON
 
-    # params runtime
+    # params runtime. OJO: con NONLINEAR_LS el unico param VIVO es dq_ref = p[0:8].
+    # p[8:22] (W_se3,W_qd,W_u) quedo MUERTO al migrar desde EXTERNAL: el peso ya no
+    # entra en la expresion del costo sino en ocp.cost.W (abajo), y en runtime se
+    # cambia con solver.cost_set(k,"W",...). Se conservan los slots para no romper la
+    # interfaz de 22 params que usan los nodos y los tests.
     dq_ref = p_sym[0:8]
-    W_se3  = p_sym[8:14]
-    W_qd   = p_sym[14:18]
-    W_u    = p_sym[18:22]
 
     # error de pose efector en se(3)
     dq_ee, _, _ = fk_ee_dq(q)

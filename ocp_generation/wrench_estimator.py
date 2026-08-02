@@ -37,11 +37,50 @@ def estimate_wrench(q, qd, qdd, tau_act, damp=1e-6):
     return F_est, tau_ext
 
 def project_observable(q, F, damp=1e-6):
-    """Proyeccion de un wrench F(6) al subespacio observable col(J) (lo recuperable)."""
+    """Proyeccion de un wrench F(6) al subespacio observable col(J) (lo recuperable
+    SI no se asume nada sobre F). Ver estimate_force() para el caso de fuerza pura."""
     J = J_of(q); Jt = J.T
     tau = Jt @ F
     AAt = Jt @ J + damp*np.eye(4)
     return J @ np.linalg.solve(AAt, tau)
+
+
+def estimate_force(q, qd, qdd, tau_act):
+    """F_ext (3) suponiendo CONTACTO DE FUERZA PURA en el efector.
+
+    Este es el estimador correcto para un empuje humano, y NO es lo mismo que tomar
+    las 3 primeras componentes de estimate_wrench(). Razon:
+
+      estimate_wrench resuelve  Jᵀ F = tau  con F ∈ R⁶ y J ∈ R⁶ˣ⁴. Son 6 incognitas
+      desde 4 medidas: el sistema esta INDETERMINADO y la solucion de norma minima
+      reparte el torque entre fuerza y momento. Una fuerza pura se mal-atribuye
+      parcialmente a un momento. Medido sobre 2197 configuraciones, ese reparto
+      pierde el 50 % de la fuerza en promedio (hasta 99.6 %).
+
+      Si se sabe que el contacto es una fuerza pura en un punto CONOCIDO (el efector),
+      el modelo correcto es  Jvᵀ f = tau  con f ∈ R³ y Jvᵀ ∈ R⁴ˣ³: SOBRE-determinado.
+      rank(Jv)=3 en el 100 % del espacio de trabajo de este brazo, asi que f se
+      recupera EXACTA (3.6e-15 sobre el mismo barrido).
+
+    ⚠️ Requiere conocer el punto de contacto. Vale para hand-guiding en el efector;
+    no vale para un contacto en cualquier lugar del eslabon. Y si el contacto aplica
+    ademas un momento (objeto agarrado), vuelve la ambiguedad: ahi hay que usar
+    estimate_wrench y aceptar la mezcla.
+
+    El limite practico NO es observabilidad sino CONDICIONAMIENTO: cerca de una
+    singularidad de Jv, sigma_min cae (mediana 0.0496, minimo 7.6e-5 en el barrido)
+    y el ruido de tau se amplifica por 1/sigma_min.
+    """
+    M = M_of(q); h = h_of(q, qd); Jv = J_of(q)[:3, :]     # 3x4
+    tau_ext = M @ qdd + h - tau_act                        # (4,)
+    f, *_ = np.linalg.lstsq(Jv.T, tau_ext, rcond=None)     # min-cuadrados: 4 ec., 3 incog.
+    return f
+
+
+def force_conditioning(q):
+    """(sigma_min, cond) de Jv: cuanto amplifica el ruido el estimador de fuerza pura."""
+    s = np.linalg.svd(J_of(q)[:3, :], compute_uv=False)
+    return float(s[2]), float(s[0]/max(s[2], 1e-16))
 
 if __name__ == "__main__":
     # ── MiL: aplicar wrench conocido, recuperarlo ──

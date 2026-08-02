@@ -11,7 +11,7 @@ Reusa convenciones DQ del DQ-MPCC del dron (mpcc_controller) — copiado, no imp
 """
 import numpy as np
 import casadi as ca
-from casadi import MX, vertcat, horzcat, mtimes, cross, jacobian, gradient
+from casadi import SX, vertcat, horzcat, mtimes, cross, jacobian, gradient
 import arm_params as P
 
 NQ = 4
@@ -28,17 +28,17 @@ def quat2R(q):
 def axisangle2R(axis, ang):
     """Rotacion alrededor de eje unitario por angulo (Rodrigues)."""
     a = axis
-    K = vertcat(horzcat(MX(0),-a[2],a[1]), horzcat(a[2],MX(0),-a[0]), horzcat(-a[1],a[0],MX(0)))
-    return MX.eye(3) + ca.sin(ang)*K + (1-ca.cos(ang))*mtimes(K,K)
+    K = vertcat(horzcat(SX(0),-a[2],a[1]), horzcat(a[2],SX(0),-a[0]), horzcat(-a[1],a[0],SX(0)))
+    return SX.eye(3) + ca.sin(ang)*K + (1-ca.cos(ang))*mtimes(K,K)
 
 def build_dynamics():
-    q  = MX.sym("q", NQ)
-    qd = MX.sym("qd", NQ)
-    g_vec = MX(P.GRAVITY)            # [0,0,-9.81]
+    q  = SX.sym("q", NQ)
+    qd = SX.sym("qd", NQ)
+    g_vec = SX(P.GRAVITY)            # [0,0,-9.81]
 
     # --- FK de la cadena: frame world de cada link + eje/ancla de cada junta ---
     # T_0 = base fija
-    Rb = quat2R(MX(P.BASE_QUAT)); pb = MX(P.BASE_POS)
+    Rb = quat2R(SX(P.BASE_QUAT)); pb = SX(P.BASE_POS)
     R_prev, p_prev = Rb, pb
     axis_w = []   # eje world de junta j (en config q)
     anch_w = []   # ancla world de junta j
@@ -48,32 +48,32 @@ def build_dynamics():
     Rcom_w = []   # rotacion world del frame de inercia de cada link
 
     for i,L in enumerate(P.LINKS):
-        Rf = quat2R(MX(L['body_quat'])); pf = MX(L['body_pos'])
+        Rf = quat2R(SX(L['body_quat'])); pf = SX(L['body_pos'])
         # frame fijo padre->body
         R_fix = mtimes(R_prev, Rf)
         p_fix = p_prev + mtimes(R_prev, pf)
         # junta: eje local a través de jnt_pos, angulo q[i]
-        ax_l = MX(L['jnt_axis'])
+        ax_l = SX(L['jnt_axis'])
         ax_world = mtimes(R_fix, ax_l)
-        anchor = p_fix + mtimes(R_fix, MX(L['jnt_pos']))
+        anchor = p_fix + mtimes(R_fix, SX(L['jnt_pos']))
         Rj = axisangle2R(ax_l, q[i])
         # frame del link tras la junta
         R_i = mtimes(R_fix, Rj)
         p_i = p_fix                      # origen del frame del link = p_fix (junta en jnt_pos)
         axis_w.append(ax_world); anch_w.append(anchor)
         # COM world + frame inercia
-        Rcom = mtimes(R_i, quat2R(MX(L['iquat'])))
-        pcom = p_i + mtimes(R_i, MX(L['ipos']))
+        Rcom = mtimes(R_i, quat2R(SX(L['iquat'])))
+        pcom = p_i + mtimes(R_i, SX(L['ipos']))
         Rlink.append(R_i); plink.append(p_i); pcom_w.append(pcom); Rcom_w.append(Rcom)
         R_prev, p_prev = R_i, p_i
 
     # --- fingers (gripper) rigido sobre hand, m5=0: payload fijo movido por m1-m4 ---
     Fg = P.FINGERS
     R_hand, p_hand = Rlink[3], plink[3]
-    R_fg = mtimes(R_hand, quat2R(MX(Fg['body_quat'])))          # m5=0 -> sin rot extra
-    p_fg = p_hand + mtimes(R_hand, MX(Fg['body_pos']))
-    pcom_fg = p_fg + mtimes(R_fg, MX(Fg['ipos']))
-    Rcom_fg = mtimes(R_fg, quat2R(MX(Fg['iquat'])))
+    R_fg = mtimes(R_hand, quat2R(SX(Fg['body_quat'])))          # m5=0 -> sin rot extra
+    p_fg = p_hand + mtimes(R_hand, SX(Fg['body_pos']))
+    pcom_fg = p_fg + mtimes(R_fg, SX(Fg['ipos']))
+    Rcom_fg = mtimes(R_fg, quat2R(SX(Fg['iquat'])))
     # añadir como link extra movido por joints 0..3
     EXTRA = [dict(mass=Fg['mass'], idiag=Fg['idiag'], pcom=pcom_fg, Rcom=Rcom_fg, upto=3)]
 
@@ -82,15 +82,15 @@ def build_dynamics():
               for i,L in enumerate(P.LINKS)] + EXTRA
 
     # --- Jacobianos geometricos por cuerpo COM ---
-    M = MX.zeros(NQ, NQ)
-    PE = MX(0)
+    M = SX.zeros(NQ, NQ)
+    PE = SX(0)
     for B in BODIES:
         mi = B['mass']
         # inercia about COM en world: R_com diag(idiag) R_com^T
-        Ib = ca.diag(MX(B['idiag']))
+        Ib = ca.diag(SX(B['idiag']))
         Iw = mtimes(mtimes(B['Rcom'], Ib), B['Rcom'].T)
         # columnas j<=upto: revoluta -> Jw col = axis_j ; Jv col = axis_j x (pcom - anchor_j)
-        Jv = MX.zeros(3, NQ); Jw = MX.zeros(3, NQ)
+        Jv = SX.zeros(3, NQ); Jw = SX.zeros(3, NQ)
         for j in range(B['upto']+1):
             Jw[:,j] = axis_w[j]
             Jv[:,j] = cross(axis_w[j], B['pcom']-anch_w[j])
@@ -99,7 +99,7 @@ def build_dynamics():
         PE += -mi * ca.dot(g_vec, B['pcom'])
 
     # armature (inercia del rotor del servo) -> diagonal de M (igual que mj_fullM)
-    M += ca.diag(MX(P.ARMATURE))
+    M += ca.diag(SX(P.ARMATURE))
 
     # --- bias h(q,qd) = Mdot·qd - ½ d(qd^T M qd)/dq + dPE/dq ---
     Mqd = mtimes(M, qd)
