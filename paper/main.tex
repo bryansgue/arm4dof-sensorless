@@ -41,7 +41,6 @@
 \newcommand{\Pobs}{\bm{P}}
 \newcommand{\Pff}{\bm{P}_{\!f\!f}}
 \newcommand{\SEthree}{\mathrm{SE}(3)}
-\newcommand{\sethree}{\mathfrak{se}(3)}
 \newcommand{\tauext}{\bm{\tau}_{\mathrm{ext}}}
 \newcommand{\tauact}{\bm{\tau}_{\mathrm{act}}}
 
@@ -114,7 +113,7 @@ power is specified.
 \end{abstract}
 
 \begin{keywords}
-Compliant control, dual quaternions, force estimation, low-cost robotics, model
+Compliant control, force estimation, low-cost robotics, model
 predictive control, physical human-robot interaction, sensorless sensing,
 under-actuated manipulators, velocity control.
 \end{keywords}
@@ -314,17 +313,16 @@ the estimator assumes. The force polytope reappears in
 Section~\ref{sec:velocity-regimes} in its classical role, where it sets the
 threshold between synthetic and physical compliance.
 
-\subsection{Dual quaternion representation and predictive control}
-Dual quaternions provide a singularity-free representation of $\SEthree$ that
-keeps translation and rotation in one algebraic object, and have been used for
-kinematic control of manipulators~\cite{figueredo2013dq} and packaged for general
-robot modeling~\cite{adorno2021dqrobotics}. The logarithmic map to $\sethree$
-couples the two components through the left Jacobian of
-$\mathrm{SO}(3)$~\cite{sola2018microlie}. We adopt this representation for the
-tracking cost and, in Section~\ref{sec:res-ablation}, report an ablation isolating
-what the coupling contributes on an under-actuated arm, where the reference is
-generically unreachable. Real-time nonlinear predictive control is enabled by the
-real-time iteration scheme~\cite{diehl2005rti} and by embedded solver
+\subsection{Predictive control with a coupled pose error}
+Tracking a pose in $\SEthree$ requires a scalar error that penalizes translation
+and rotation jointly. The simplest choice keeps them decoupled, adding a position
+error and an orientation error independently. A coupled alternative expresses the
+translational part in the frame of the rotational error through the inverse left
+Jacobian of $\mathrm{SO}(3)$~\cite{sola2018microlie}. Section~\ref{sec:res-ablation}
+reports an ablation isolating what that coupling contributes on an under-actuated
+arm, where the reference is generically unreachable. Real-time nonlinear
+predictive control is enabled by the real-time iteration
+scheme~\cite{diehl2005rti} and by embedded solver
 frameworks~\cite{verschueren2022acados,andersson2019casadi,frison2020hpipm}.
 
 % =========================================================================
@@ -396,7 +394,7 @@ command.
 \caption{System architecture. The servo returns position, velocity, and effort;
 the effort channel takes the place of a force/torque sensor. The residual and the
 point-contact inversion produce $\hat{\bm f}$, an admittance converts it into a
-displaced dual quaternion reference, and the predictive controller returns a joint
+displaced pose reference, and the predictive controller returns a joint
 velocity command, which is the only input the actuator accepts.}
 \label{fig:arch}
 \end{figure*}
@@ -436,24 +434,25 @@ estimation.
 \label{rem:kv}
 \end{remark}
 
-\subsection{Dual quaternion kinematics}
-The end-effector pose is a unit dual quaternion
-$\underline{\bm q}_{ee}=\bm q_r+\varepsilon\,\bm q_d$, with
-$\bm q_d=\tfrac12\,\bm t\otimes\bm q_r$. The error against a desired
-$\underline{\bm q}_d$ is
-$\underline{\bm q}_e=\underline{\bm q}_d^{*}\otimes\underline{\bm q}_{ee}$ and its
-logarithm is
+\subsection{Pose error}
+\label{sec:poseerr}
+Tracking requires a scalar measure of pose error. We use a six-dimensional error
+whose rotational part is the axis-angle vector $\bm\varphi$ of the orientation
+error and whose translational part is expressed in the frame of that rotational
+error,
 \begin{equation}
-\bm e=\log\underline{\bm q}_e
-=\begin{bmatrix}\bm\varphi\\ \bm\rho\end{bmatrix}\in\sethree,
+\bm e=\begin{bmatrix}\bm\varphi\\ \bm\rho\end{bmatrix}\in\R^{6},
 \qquad
 \bm\rho=\bm J_\ell(\bm\varphi)^{-1}\bm t_{\mathrm{err}},
 \label{eq:logdual}
 \end{equation}
-in which the translational part is expressed in the frame of the rotational error
-through the inverse left Jacobian of $\mathrm{SO}(3)$~\cite{sola2018microlie}.
-This coupling distinguishes \eqref{eq:logdual} from a decoupled error and its
-contribution is quantified in Section~\ref{sec:res-ablation}.
+with $\bm J_\ell$ the left Jacobian of $\mathrm{SO}(3)$~\cite{sola2018microlie}
+and $\bm t_{\mathrm{err}}$ the translational error. The factor
+$\bm J_\ell^{-1}$ is what distinguishes \eqref{eq:logdual} from a decoupled
+error that adds position and orientation independently, and since
+$\bm J_\ell^{-1}\to\bm I$ as $\|\bm\varphi\|\to0$ the two agree in the
+small-error limit. Section~\ref{sec:res-ablation} quantifies what the coupling
+buys.
 
 \subsection{Model validation}
 \label{sec:validation}
@@ -911,7 +910,7 @@ regimes without modification.
 \label{sec:control}
 % =========================================================================
 
-\subsection{Admittance in $\sethree$}
+\subsection{Admittance}
 The estimated contact force drives a first-order admittance that displaces the
 reference pose from the nominal task pose, with a return spring that restores it
 when contact ceases,
@@ -922,9 +921,9 @@ when contact ceases,
 where $\bm\nu$ is the reference twist, $\bm D$ collects translational and
 rotational damping, $k$ is the return stiffness, and $\bm e_{\mathrm{task}}$ is the
 displacement of the reference from the task pose. The twist is integrated on the
-dual quaternion reference directly, so translation and rotation remain one object.
+dual pose reference directly, so translation and rotation remain one object.
 
-\subsection{Dual quaternion predictive controller}
+\subsection{Predictive controller}
 A nonlinear predictive controller tracks the compliant reference. The state is
 $\bm x=[\bm q^{\!\top}\ \dot{\bm q}^{\!\top}]^{\!\top}\in\R^8$, the input is joint
 torque, and the servo receives the predicted velocity $\dot{\bm q}^\star_1$, which
@@ -1421,7 +1420,7 @@ $59\,\%$ in the maximum.
 
 \subsection{Ablation of the pose metric}
 \label{sec:res-ablation}
-The logarithm \eqref{eq:logdual} differs from a decoupled error only through
+The coupled error \eqref{eq:logdual} differs from a decoupled one only through
 $\bm J_\ell(\bm\varphi)^{-1}$, and since $\bm J_\ell^{-1}\to\bm I$ as
 $\norm{\bm\varphi}\to0$ the two coincide in the small-error limit; a comparison
 conducted there is a tautology rather than an experiment. The relative difference
@@ -1464,8 +1463,8 @@ reachable, the two tie as predicted, which serves as a positive control.
 
 The effect is real but small. Where the cost functions differ by $34\,\%$ the
 closed loop differs by $2.8\,\%$, because torque saturation and the reachable
-manifold dominate the compromise. We therefore do not advance the dual quaternion
-formulation as a performance claim. Its merit is that it supplies the
+manifold dominate the compromise. We therefore do not advance the coupled error
+as a performance claim. Its merit is that it supplies the
 geometrically consistent compromise by construction and at no computational cost,
 both branches requiring $2.48$~ms per solve.
 

@@ -21,6 +21,17 @@ Corpus: **no hay corpus local todavía.** Ver "Pendiente" abajo.
   contexto, delimita el estado del arte — [must-cite]
 - **Yoshikawa, IJRR 1985** — elipsoides de manipulabilidad — problema DUAL
   (producir vs percibir) — [context]
+
+⚠️ **Los dual quaternions se SACARON del paper (01/08/2026).** Motivo doble:
+(1) no sostenían ninguna de las tres contribuciones, y la ablación daba 0.8-2.8%;
+(2) el paper llamaba a la ec. (6) "the se(3) logarithm" y **NO lo es** — verificado
+contra el logaritmo matricial de SE(3) sobre 200 poses: φ difiere por factor 2 y ρ
+por factores no constantes (0.63, 1.14, 1.17). `dq_math.ln_dual` calcula
+`φ = (ángulo/2)·eje` pero aplica `J_l⁻¹` evaluado en ese MEDIO ángulo y a `t_err`
+sin dividir: no coincide ni con el log DQ estándar ni con el de SE(3). Sigue siendo
+una métrica de pose válida, pero el nombre era falso. La ablación se conserva,
+reencuadrada como error acoplado vs desacoplado. Se eliminaron figueredo2013dq y
+adorno2021dqrobotics.
 - **Chiacchio et al., 1997** — politopos de fuerza — se usa en su rol clásico para
   el umbral de saturación (Sec. V-C) — [context]
 

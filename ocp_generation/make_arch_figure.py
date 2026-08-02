@@ -74,7 +74,7 @@ arrow(ax, (0.335, 0.54), (0.395, 0.54), r"$\hat f$", color=BLUE, off=(0, 0.012))
 
 # ── NMPC ─────────────────────────────────────────────────────────────────────
 box(ax, 0.655, 0.44, 0.245, 0.20,
-    "DQ-NMPC\n" r"$\min\sum\|[\,e;\dot q;\tau]\|^2_W$" "\n"
+    "NMPC\n" r"$\min\sum\|[\,e;\dot q;\tau]\|^2_W$" "\n"
     r"$e=\log(q_d^*\otimes q_{ee})$",
     fc="#fdf3ec", ec=ORANGE, fs=7.8)
 arrow(ax, (0.595, 0.54), (0.655, 0.54), r"$q_{\rm ref}$", color=GREEN,
