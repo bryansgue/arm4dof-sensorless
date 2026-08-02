@@ -109,6 +109,33 @@ banda muerta donde cae.
 
 ---
 
+## S3 — lo unico que hace falta correr para el paper
+
+`s3_conditioning.py`. **Verificado de punta a punta** con `--sim` (ensayo en seco
+contra MuJoCo, sin prompts): el flujo corre, las cuatro posturas se alcanzan y los
+`sigma_min` medidos (0.0108, 0.0204, 0.0435, 0.0918) coinciden con los de
+seleccion.
+
+```bash
+python3 s3_conditioning.py --sim              # ensayo en seco, sin hardware
+python3 s3_conditioning.py --port /dev/ttyUSB0             # parte A, sin pesa
+python3 s3_conditioning.py --port /dev/ttyUSB0 --mass 0.1  # A y B
+```
+
+**Parte A** es la que importa: par deshabilitado, sin pesa, sin lazo de control,
+bus a 10 Hz alcanza. Una tarde.
+
+⚠️ La parte A **no se puede ensayar en simulacion**: MuJoCo es determinista y
+`std(tau)` da exactamente 0. El script lo avisa. Esta diseñada para medir algo que
+el simulador no tiene.
+
+⚠️ **Parte B: sostener en modo POSICION.** Con lazo de velocidad blando el brazo se
+hunde y ninguna masa util baja del 3 % de contaminacion del Jacobiano. El script
+reporta `dq` y `dJ/J` y avisa.
+
+⚠️ **S3 puede FALLAR**, y esta diseñado para decirlo fuerte. Pendiente ~0 significa
+que la Seccion IV del paper esta mal. Es el desenlace mas informativo posible.
+
 ## Etapas
 
 ### S0 — Sondeo del bus y tasa alcanzable ⛔ BLOQUEA TODO

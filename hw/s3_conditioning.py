@@ -22,12 +22,25 @@ este script y estaba mal (ver abajo).
   B. EXACTITUD (con pesa conocida).  Mide el SESGO, no la dispersion. Es una
      afirmacion distinta y complementaria.
 
-     ⚠️ NO usar la forma diferencial ingenua tau(con) - tau(sin) con un Jacobiano
-     promedio: medido en MuJoCo, colgar 0.2 kg hunde el brazo 0.05-0.06 rad y
-     cambia Jv un 8-10 %, lo que mete un sesgo del 25 % que TAPA por completo el
-     efecto del condicionamiento. Con eso, el ajuste de la ley daba pendiente
-     +0.17 en vez de -1. Hay que sostener el brazo rigido (modo POSICION, no
-     velocidad) y registrar q en cada medida.
+     ⚠️ SOSTENER EL BRAZO EN MODO POSICION, no en velocidad. La forma diferencial
+     asume el MISMO Jv en las dos medidas, y colgar la pesa hunde el brazo. Medido
+     en el banco (lazo de velocidad blando), el compromiso masa/contaminacion:
+
+         masa      |dq|      dJ/J     senal    error
+         0.05 kg   0.015 rad  2.3 %   0.098    0.13 N
+         0.10 kg   0.030 rad  4.6 %   0.197    0.16 N
+         0.20 kg   0.064 rad  9.6 %   0.415    0.22 N
+         0.35 kg   0.120 rad 17.8 %   0.782    0.15 N
+
+     Con lazo blando NINGUNA masa util baja del 3 %: bajar la masa reduce el
+     hundimiento pero tambien la señal. La salida no es elegir la masa sino
+     SOSTENER MAS RIGIDO. El modo posicion del MX-28 (kp del servo) es mucho mas
+     rigido que este banco. El script reporta dq y dJ/J en cada postura y avisa
+     si dJ/J supera el 3 %: si avisa, el numero de la parte B no sirve.
+
+     ⚠️ Con un diseño anterior que promediaba tau(con)-tau(sin) sin vigilar esto,
+     el ajuste de la ley daba pendiente +0.17 en vez de -1, o sea que habria
+     "refutado" la Sec. IV por un error del test.
 
 ═══ POR QUE ESTE Y NO LA CAMPAÑA COMPLETA ═══
 Es lo mas barato que convierte "todo es simulacion" en "la prediccion central se
@@ -91,6 +104,26 @@ def measure(arm, n=NSAMP):
     return np.mean(Q, 0), np.mean(T, 0), np.std(T, 0)
 
 
+SIM = False
+
+
+def ask(msg):
+    """En hardware espera al operador; en ensayo en seco no bloquea."""
+    if SIM:
+        print(f"  [sim] {msg}")
+        return
+    input(msg)
+
+
+def _place(arm, q_ref):
+    """En ensayo en seco lleva el banco a la postura; en hardware no hace nada
+    (el brazo lo posiciona el operador, con el par deshabilitado)."""
+    if SIM:
+        arm.set_state(q_ref)
+        from validate_procedures import hold
+        arm.enable(True); hold(arm, q_ref)
+
+
 def part_A(arm):
     """Ley de escala: dispersion de f_est contra sigma_min. SIN pesa."""
     print("\n" + "=" * 74)
@@ -100,11 +133,13 @@ def part_A(arm):
     for p, (q_ref, sig_model) in enumerate(POSES):
         print(f"\nPOSTURA {p+1}/4   q = {np.round(q_ref,3)}   "
               f"sigma_min esperado {sig_model:.4f}")
-        input("  Llevar el brazo a esa postura y fijarlo. Enter cuando este quieto... ")
+        ask("  Llevar el brazo a esa postura y fijarlo. Enter cuando este quieto... ")
+        _place(arm, q_ref)
         Q = []; T = []
         for _ in range(NSAMP):
             q, qd, tau = arm.read()
-            Q.append(q); T.append(tau); time.sleep(0.01)
+            Q.append(q); T.append(tau)
+            if not SIM: time.sleep(0.01)
         Q = np.array(Q); T = np.array(T)
         qm = Q.mean(0); Jv = Jv_(qm)
         sig = np.linalg.svd(Jv, compute_uv=False)[2]
@@ -155,14 +190,18 @@ def part_B(arm, mass):
     out = []
     for p, (q_ref, _) in enumerate(POSES):
         print(f"\nPOSTURA {p+1}/4   q = {np.round(q_ref,3)}")
-        input("  Llevar el brazo a esa postura y fijarlo. Enter... ")
+        ask("  Llevar el brazo a esa postura y fijarlo. Enter... ")
+        _place(arm, q_ref)
         M = {}
         for lab in ("SIN", "CON"):
-            input(f"  Pesa {lab} colgada. Enter cuando este quieto... ")
+            ask(f"  Pesa {lab} colgada. Enter cuando este quieto... ")
+            if SIM:
+                arm.hang(mass if lab == "CON" else 0.0); _place(arm, q_ref)
             time.sleep(SETTLE)                # re-asentar: cambia la stiction
             Q = []; T = []
             for _ in range(NSAMP):
-                q, qd, tau = arm.read(); Q.append(q); T.append(tau); time.sleep(0.01)
+                q, qd, tau = arm.read(); Q.append(q); T.append(tau)
+            if not SIM: time.sleep(0.01)
             M[lab] = (np.mean(Q, 0), np.mean(T, 0))
         dq = np.linalg.norm(M["CON"][0] - M["SIN"][0])
         qm = 0.5*(M["SIN"][0] + M["CON"][0])
@@ -185,6 +224,11 @@ def main():
     ap.add_argument("--ids", type=int, nargs="+", default=[1, 2, 3, 4])
     ap.add_argument("--mass", type=float, default=None,
                     help="kg de la pesa; omitir para correr solo la parte A")
+    ap.add_argument("--sim", action="store_true",
+                    help="ENSAYO EN SECO contra MuJoCo: sin hardware y sin prompts. "
+                         "Verifica el flujo del script, NO produce resultados "
+                         "publicables. La parte A ademas no puede validarse asi: "
+                         "MuJoCo es determinista y std(tau) da 0.")
     args = ap.parse_args()
 
     print("=" * 74)
@@ -193,7 +237,15 @@ def main():
     print("El brazo NO se mueve solo: el par queda DESHABILITADO y lo posicionas")
     print("a mano. Solo se lee.")
 
-    arm = dxl_io.DxlArm(port=args.port, baud=args.baud, ids=args.ids)
+    global SIM
+    SIM = args.sim
+    if SIM:
+        import mj_arm
+        print("\n⚠️ ENSAYO EN SECO contra MuJoCo. No es hardware y no produce")
+        print("   resultados publicables: solo verifica que el script corre.\n")
+        arm = mj_arm.MjArm(); arm.set_velocity_mode()
+    else:
+        arm = dxl_io.DxlArm(port=args.port, baud=args.baud, ids=args.ids)
     try:
         arm.enable(False)
         S, D, slope, r2 = part_A(arm)
