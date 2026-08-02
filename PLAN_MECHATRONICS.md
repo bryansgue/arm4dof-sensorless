@@ -1,3 +1,8 @@
+> ⚠️ **DOCUMENTO HISTÓRICO.** El venue cambió a **IEEE Access** y el paper ya está
+> escrito (`paper/`). Este archivo se conserva porque contiene las correcciones de
+> E1 y E4 con su contexto, que explican por qué varios resultados previos no
+> reproducían. **Para el estado actual, leer [`CLAUDE.md`](CLAUDE.md).**
+
 # PLAN — Paper
 
 > ⚠️ **VENUE CAMBIADO el 01/08/2026: va a IEEE ACCESS.** Decisión del usuario,
