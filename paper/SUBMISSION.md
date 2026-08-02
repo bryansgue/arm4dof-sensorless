@@ -8,6 +8,11 @@ pdflatex main && bibtex main && pdflatex main && pdflatex main
 
 ---
 
+## Estado: LISTO PARA SUBIR salvo un punto
+
+El PDF compila y no tiene marcadores. Lo único que bloquea es la autoría (punto 1).
+ORCID se carga en el portal. Las fotos de biografía van en cámara lista.
+
 ## ⚠️ Lo que TENÉS que decidir vos antes de subir
 
 ### 1. Autoría — la única cosa que no puedo decidir
@@ -27,9 +32,9 @@ del otro paper.
 IEEE Access lo pide para **todos** los autores. Se carga en el portal, no en el
 `.tex`.
 
-### 3. Fotos de biografía
-Las tres biografías están escritas pero usan `IEEEbiographynophoto`, porque **no
-hay fotos en ningún repositorio**. Para cámara lista:
+### 3. Fotos de biografía — NO bloquea el primer envío
+Las tres biografías están escritas y usan `IEEEbiographynophoto`, que compila.
+Las fotos se agregan en cámara lista, no ahora:
 
 ```latex
 \begin{IEEEbiography}[{\includegraphics[width=1in,height=1.25in,clip,
