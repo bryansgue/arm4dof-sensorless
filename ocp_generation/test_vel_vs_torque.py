@@ -92,15 +92,24 @@ if __name__ == "__main__":
     N = GT.N_HORIZON
 
     print("=" * 72)
-    print("A) Nominal: kv real = kv del modelo = 20.  Regulacion a una pose.")
+    print("A) Regulacion a una pose, kv real = kv del modelo = 20.")
+    print("   ⚠️ Se mide TRAS ASENTAR (1000 pasos) y con el peso del comando de V0")
+    print("   ajustado, que es la condicion que reporta la Tabla IV del paper. Con")
+    print("   250 pasos y W_u=0.3 los numeros son otros (T 0.754, V0 5.637): esa")
+    print("   diferencia es tiempo de asentamiento, no de formulacion.")
     print("=" * 72)
     print(f"{'OCP':>4} {'estados':>8} {'usa M,h':>8} {'usa kv':>7} "
           f"{'err final [mm]':>15} {'ms/solve':>9} {'fallos':>7}")
     rows = {}
+    # V0 con el peso de comando ajustado (ver seccion B del paper)
+    Ws = [2., 2., 2., 80., 80., 80.]
+    for k in range(GV.N_HORIZON):
+        sV0.cost_set(k, "W", np.diag(Ws + [0.01]*4))
+    sV0.cost_set(GV.N_HORIZON, "W", np.diag(Ws))
     for kind, s, nx, usa, usakv in [("T", sT, 8, "si", "no"),
                                     ("V1", sV1, 8, "si", "SI"),
                                     ("V0", sV0, 4, "no", "no")]:
-        e, t, b = run(kind, s, N)
+        e, t, b = run(kind, s, N, T=1000)
         rows[kind] = (e, t, b)
         print(f"{kind:>4} {nx:>8} {usa:>8} {usakv:>7} "
               f"{1000*e[-1]:15.3f} {t.mean():9.3f} {b:7d}")

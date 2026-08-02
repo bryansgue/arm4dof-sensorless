@@ -40,6 +40,34 @@ Hay un comentario con la sintaxis exacta antes de las biografías.
 
 ---
 
+## Auditoría de reproducibilidad (01/08/2026)
+
+Se re-corrió **todo** script que produce un número del paper. Resultado:
+
+**Reproducen exacto:** modelo (8.78e-11 / 2.73e-09 / 6.93e-13), barrido de 2197
+configs, barrido direccional (correlación 0.9993), MiL, Monte Carlo de ruido,
+gating, MuJoCo wrench (2.227 → 0.157 N), pareado N=6 (t=4.42), trayectoria
+(6.82 mm), regulación (1.65 mm), ley de condicionamiento (−0.872 / R² 0.980),
+ablación, capacidad de fuerza, direcciones con nombre, divergencia de métricas.
+
+**Tres defectos encontrados y corregidos:**
+
+1. **Cinco tablas salían de scripts inline nunca guardados.** La sección
+   "Reproducibility" del paper afirmaba que cada tabla la produce un script con
+   nombre, y era **falso**. Creado `ocp_generation/reproduce_paper_tables.py`.
+2. **La tabla de inyección de fallas se había calculado con las poses VIEJAS**,
+   tres de las cuales estaban dentro del piso (descubierto después, con MuJoCo).
+   Recalculada con las poses válidas: 8.75 / 4.38 / 1.31 / 1.09 en vez de
+   7.38 / 3.69 / 1.66 / 0.90. **El orden y la conclusión no cambian**, y el umbral
+   de 0.3 N sigue separando lo mismo.
+3. **La Tabla IV no la reproducía su script.** Los números (T 0.180, V0 0.122)
+   venían de 1000 pasos con `W_u` ajustado; el script corría 250 pasos con el peso
+   por defecto y daba 0.754 y 5.637. Alineado el script; V0 pasa a 0.120.
+
+⚠️ La columna de desplazamiento de la tabla de reparto por `kv` también se
+recalculó (350 / 106 / 18 / 3.5 mm en vez de 200 / 43 / 8 / 1.6): dependía del
+número de pasos de asentamiento, que no estaba fijado.
+
 ## Lo que ya está resuelto
 
 | | |

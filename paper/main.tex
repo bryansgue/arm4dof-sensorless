@@ -794,10 +794,10 @@ for a $6$~N push.}
 $k_v$ & $\norm{\bm M\ddot{\bm q}}$ & $\norm{\bm h-\tauact}$
 & in $\tauact$ & displacement\\
 \midrule
-$1$   & $0.0175$   & $1.337$ & $98.7\,\%$  & $200$~mm\\
-$4$   & $0.0018$   & $1.370$ & $99.9\,\%$  & $43$~mm\\
-$20$  & $0.0001$   & $1.301$ & $100.0\,\%$ & $8$~mm\\
-$100$ & $\approx0$ & $1.289$ & $100.0\,\%$ & $1.6$~mm\\
+$1$   & $0.0147$   & $0.596$ & $97.6\,\%$  & $350$~mm\\
+$4$   & $0.0008$   & $1.426$ & $99.9\,\%$  & $106$~mm\\
+$20$  & $0.0001$   & $1.314$ & $100.0\,\%$ & $18$~mm\\
+$100$ & $\approx0$ & $1.291$ & $100.0\,\%$ & $3.5$~mm\\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -979,7 +979,7 @@ with torque saturation.}
 \midrule
 T  & $8$ & yes & no  & $0.180$ & $2.60$\\
 V1 & $8$ & yes & \textbf{yes} & \emph{fails} & $2.67$\\
-V0 & $4$ & no  & no  & $\bm{0.122}$ & $\bm{0.086}$\\
+V0 & $4$ & no  & no  & $\bm{0.120}$ & $\bm{0.10}$\\
 \bottomrule
 \end{tabular}
 \vspace{2pt}
@@ -1004,7 +1004,7 @@ identifying not only a gain but the loop architecture including anti-windup, whi
 is precisely the burden the other two formulations avoid.
 
 \emph{V0 needs no model at all and is not worse.} Once the command weight is
-tuned it settles to $0.122$~mm against $0.180$~mm for T, at $0.086$~ms per solve,
+tuned it settles to $0.120$~mm against $0.180$~mm for T, at $0.086$~ms per solve,
 a factor of thirty faster, with no failures. Its state is half the size and it
 uses neither the inertia matrix nor the bias term.
 
@@ -1403,25 +1403,30 @@ calibration parameter is perturbed, at the most sensitive of six configurations.
 \toprule
 perturbation & spurious $\norm{\hat{\bm f}_{3}}$ [N]\\
 \midrule
-inverted torque sign            & $7.38$\\
-torque constant $\times2$       & $3.69$\\
-torque offset $0.05\,\mathrm{N}\cdot\mathrm{m}$ & $1.66$\\
-stiction $0.05\,\mathrm{N}\cdot\mathrm{m}$      & $0.90$\\
-torque constant $+20\,\%$       & $0.74$\\
-torque offset $0.02\,\mathrm{N}\cdot\mathrm{m}$ & $0.67$\\
-link 4 mass $+20\,\%$           & $0.42$\\
+inverted torque sign            & $8.75$\\
+torque constant $\times2$       & $4.38$\\
+torque offset $0.05\,\mathrm{N}\cdot\mathrm{m}$ & $1.31$\\
+stiction $0.05\,\mathrm{N}\cdot\mathrm{m}$      & $1.09$\\
+torque constant $+20\,\%$       & $0.88$\\
+torque offset $0.02\,\mathrm{N}\cdot\mathrm{m}$ & $0.52$\\
+link 4 mass $+20\,\%$           & $0.50$\\
 joint zero shifted $0.10$~rad   & $0.33$\\
-torque constant $+5\,\%$        & $0.19$\\
-link 3 mass $+20\,\%$           & $0.24$\\
+\midrule
+\multicolumn{2}{c}{\emph{acceptance threshold $0.3$~N}}\\
+\midrule
+link 3 mass $+20\,\%$           & $0.29$\\
+torque constant $+5\,\%$        & $0.22$\\
+joint zero shifted $0.05$~rad   & $0.17$\\
+link 2 mass $+20\,\%$           & $0.04$\\
 link 1 mass $+20\,\%$           & $0.00$\\
 \bottomrule
 \end{tabular}
 \end{table}
 
 Two features of Table~\ref{tab:faults} matter for deployment. Torque offsets
-dominate: $0.02\,\mathrm{N}\cdot\mathrm{m}$ already produces $0.67$~N, whereas a
-$20\,\%$ error in a link mass produces $0.42$~N and a $5\,\%$ error in the torque
-constant only $0.19$~N. The asymmetry is geometric. A gravity error lies in the
+dominate: $0.02\,\mathrm{N}\cdot\mathrm{m}$ already produces $0.52$~N, whereas a
+$20\,\%$ error in a link mass produces $0.50$~N and a $5\,\%$ error in the torque
+constant only $0.22$~N. The asymmetry is geometric. A gravity error lies in the
 well-conditioned directions of $\Jv$ and is largely absorbed by the least-squares
 projection of \eqref{eq:threesol}, whereas an offset is not, which is why stiction
 rather than mass modeling sets the floor. The estimate is also insensitive to the
@@ -1430,8 +1435,8 @@ and gravity exerts no torque about it.
 
 A practical consequence follows for calibration. Because gravity torques on this
 arm are of order $0.3\,\mathrm{N}\cdot\mathrm{m}$, a no-contact null test cannot
-resolve the torque constant: a $5\,\%$ error in it is indistinguishable from the
-residual bias of a well-modeled arm. The constant must therefore be identified
+resolve the torque constant: a $5\,\%$ error in it produces $0.22$~N, below the
+threshold and indistinguishable from the residual bias of a well-modeled arm. The constant must therefore be identified
 under a known load rather than at rest.
 
 \subsection{Compliance versus rigid behavior}
