@@ -1316,6 +1316,72 @@ identified analytically in Section~\ref{sec:estimation} are thus separable
 experimentally, and monitoring $\sigma_{\min}(\Jv)$ online becomes an actionable
 recommendation with a measured benefit.
 
+\subsection{Direct verification of the conditioning bound}
+\label{sec:res-cond}
+Section~\ref{sec:res-noise} showed that rejecting ill-conditioned postures
+shortens the tail of the point-contact estimator, which is consistent with
+\eqref{eq:noise} but does not measure its exponent. We test the bound directly and
+through the independent plant.
+
+The arm is held at four postures spanning $\sigma_{\min}(\Jv)$ from $0.011$ to
+$0.092$, a factor of nine, selected to be free of contact, clear of the floor, and
+away from the joint limits. Sensor noise is injected on the current reading, which
+is where the servo carries it, at one and at three quantization steps of the
+MX-28R. For each posture we estimate the force sample by sample and record the
+dispersion of the estimate, which is the quantity \eqref{eq:noise} bounds.
+
+\begin{table}[!t]
+\caption{Noise amplification through the MuJoCo plant. Dispersion of the
+point-contact estimate at four postures, with sensor noise injected on the current
+reading.}
+\label{tab:condlaw}
+\centering
+\footnotesize
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{ccccc}
+\toprule
+$\sigma_{\min}(\Jv)$ & $\mathrm{std}(\bm\tau)$ & $\mathrm{std}(\hat{\bm f})$
+& bound \eqref{eq:noise} & ratio\\
+\midrule
+\multicolumn{5}{l}{\emph{current noise $\sigma=3.4$~mA (one quantization step)}}\\
+$0.0108$ & $0.0039$ & $0.183$ & $0.361$ & $0.51$\\
+$0.0204$ & $0.0036$ & $0.096$ & $0.175$ & $0.55$\\
+$0.0435$ & $0.0037$ & $0.044$ & $0.085$ & $0.51$\\
+$0.0918$ & $0.0035$ & $0.030$ & $0.038$ & $0.77$\\
+\midrule
+\multicolumn{5}{l}{\emph{current noise $\sigma=10$~mA (three quantization steps)}}\\
+$0.0108$ & $0.0102$ & $0.451$ & $0.945$ & $0.48$\\
+$0.0204$ & $0.0103$ & $0.250$ & $0.504$ & $0.50$\\
+$0.0435$ & $0.0102$ & $0.128$ & $0.233$ & $0.55$\\
+$0.0918$ & $0.0102$ & $0.085$ & $0.111$ & $0.76$\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Table~\ref{tab:condlaw} reports the outcome. Fitting
+$\log\mathrm{std}(\hat{\bm f})$ against $\log\sigma_{\min}(\Jv)$ gives a slope of
+$-0.872$ with $R^2=0.980$ at the lower noise level and $-0.790$ with $R^2=0.987$
+at the higher one, against the predicted $-1$. The dispersion therefore scales
+essentially inversely with $\sigma_{\min}(\Jv)$ across a ninefold range, at two
+noise levels, and through a plant whose damping, armature, and dry friction are
+absent from the estimator model.
+
+Two details are worth stating. The measured dispersion is consistently below the
+bound, at $0.48$ to $0.77$ of it, which is as it should be: \eqref{eq:noise} is an
+upper bound attained only when the residual error aligns with the least
+observable direction. And the fitted slope is slightly shallower than $-1$ for the
+same reason, since the alignment varies with posture.
+
+\begin{remark}
+The noise here is modeled rather than measured: MuJoCo is deterministic, so at
+equilibrium the actuator torque is exactly constant and quantization alone
+produces zero variance. What this experiment establishes is that the bound governs
+the estimator when it is driven through the full nonlinear plant, not merely in
+the algebraic setting of Section~\ref{sec:estimation}. Replacing the modeled noise
+with a real servo's is the remaining step, and it requires only a static
+measurement with the actuators disabled.
+\end{remark}
+
 \subsection{Sensitivity to model and calibration error}
 \label{sec:res-sens}
 Section~\ref{sec:velocity} places the error budget on the current-to-torque

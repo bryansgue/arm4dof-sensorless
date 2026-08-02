@@ -53,7 +53,16 @@ class MjArm:
     """Interfaz DxlArm sobre MuJoCo. Comando = velocidad de junta."""
 
     def __init__(self, port=None, baud=None, ids=(1, 2, 3, 4),
-                 torque_const=None, q0=None, quantize=True, seed=0):
+                 torque_const=None, q0=None, quantize=True, seed=0,
+                 cur_noise_A=0.0):
+        """cur_noise_A: sigma del ruido ADITIVO de corriente, en amperios.
+
+        ⚠️ MuJoCo es determinista: en equilibrio el par es exactamente constante
+        y la cuantizacion sola da varianza CERO. Un servo real tiene ruido
+        electrico aditivo ademas de la cuantizacion. Sin este termino no se puede
+        estudiar la amplificacion de ruido en este banco.
+        Referencia: el LSB de corriente del MX-28 es 3.36 mA, asi que un sigma
+        de 1-3 LSB (3-10 mA) es el orden razonable."""
         import mujoco
         self.mj = mujoco
         self.m = mujoco.MjModel.from_xml_path(ensure_scene())
@@ -61,6 +70,7 @@ class MjArm:
         self.n = 4
         self.ids = list(ids)
         self.quantize = quantize
+        self.cur_noise_A = float(cur_noise_A)
         self.kt = np.ones(self.n) if torque_const is None \
             else np.asarray(torque_const, float)
         self.qadr = [self.m.jnt_qposadr[mujoco.mj_name2id(
@@ -72,6 +82,7 @@ class MjArm:
         self.tip = mujoco.mj_name2id(self.m, mujoco.mjtObj.mjOBJ_BODY, TIP_BODY)
         self.payload = 0.0
         self.enabled = False
+        self.rng = np.random.default_rng(seed)
         mujoco.mj_forward(self.m, self.d)
         if q0 is not None:
             self.set_state(q0)
@@ -114,11 +125,12 @@ class MjArm:
         q = np.array([self.d.qpos[i] for i in self.qadr])
         qd = np.array([self.d.qvel[i] for i in self.dadr])
         tau_true = np.array([self.d.actuator_force[a] for a in self.aid])
+        i_meas = tau_true/KT_TRUE
+        if self.cur_noise_A > 0.0:
+            i_meas = i_meas + self.rng.normal(0.0, self.cur_noise_A, self.n)
         if self.quantize:
             q = np.round(q/ENC_LSB)*ENC_LSB
-            i_meas = np.round((tau_true/KT_TRUE)/CUR_LSB)*CUR_LSB
-        else:
-            i_meas = tau_true/KT_TRUE
+            i_meas = np.round(i_meas/CUR_LSB)*CUR_LSB
         return q, qd, i_meas*self.kt
 
     # ── utilidades del banco ─────────────────────────────────────────────────
