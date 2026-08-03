@@ -193,22 +193,25 @@ paper contributes a quantitative design framework for that regime, resting on tw
 components of unequal weight.
 
 \begin{table}[!t]
-\caption{Residual-based interaction sensing: operating regime of representative
-approaches.}
+\caption{Residual-based interaction sensing and the analyses closest to it:
+operating regime of representative approaches. A dash marks a quantity the cited
+work does not report, not one it reports as zero.}
 \label{tab:gap}
 \centering
 \footnotesize
 \setlength{\tabcolsep}{3pt}
 \begin{tabular}{lcccc}
 \toprule
- & joints & actuation & inversion & force error\\
+ & joints & actuation & inversion & error reported\\
 \midrule
 \cite{deluca2005sensorless}  & $\ge6$ & torque & six-dimensional & --- \\
 \cite{deluca2006collision}   & $7$    & torque & six-dimensional & --- \\
 \cite{magrini2014virtual}    & $7$    & torque & point contact   & hardware, one pose \\
 \cite{haddadin2017survey}    & $\ge6$ & torque & six-dimensional & --- \\
+\cite{wong2024sensorobs}     & $7$, $3$ & ---  & ---             & index, per posture \\
+\cite{lu2023configopt}       & $6$    & torque & six-dimensional & index, over workspace \\
 \midrule
-this work & $\bm{4}$ & \textbf{velocity} & point contact & over workspace\\
+this work & $\bm{4}$ & \textbf{velocity} & point contact & force, over workspace\\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -250,12 +253,23 @@ demonstrator, not an independent contribution: it shows that the estimate closes
 compliant loop under the constraints of the platform, and its formulation is
 standard.
 
-We claim neither of the two ingredients that are individually established. That
-$\Jfull^{\!\top}\bm F=\tauext$ requires $n\ge6$ and that restricting the unknown
-to a force at a known contact point reduces the task dimension to three are both
-stated in~\cite{magrini2014virtual}. What is contributed is the quantification
-that turns those statements into design criteria, and the velocity-actuated
-regime, which that literature does not address.
+Several ingredients of this framework are individually established, and it is
+worth listing them so that the contribution is not read as larger than it is. That
+$\Jfull^{\!\top}\bm F=\tauext$ requires $n\ge6$, and that restricting the unknown
+to a force at a known contact point reduces the task dimension to three, are both
+stated in~\cite{magrini2014virtual}; that a posture can leave a task-space
+direction unobserved by joint torque sensing, and that this can be measured by a
+per-configuration index, is established
+in~\cite{wong2024sensorobs}; that Jacobian conditioning governs the accuracy of
+the reconstruction and can be used to select postures is established
+in~\cite{lu2023configopt}; motor current has been used in place of joint torque
+sensing~\cite{wahrburg2018motorcurrent}, and the point-contact reduction is already
+the practical default on low-cost arms~\cite{yen2019virtual}. What is contributed
+is the quantity none of them reports, namely how much of an applied force the
+six-dimensional inversion discards, in which directions, and how often across a
+workspace; the demonstration that the loss is silent under a conventional
+validation; and the velocity-actuated regime, which that literature does not
+address.
 
 The $50.5\,\%$ figure is not itself a general result: it belongs to this arm, this
 workspace, and this distribution of push directions. It carries weight because
@@ -1082,14 +1096,16 @@ with torque saturation.}
 \toprule
  & $n_x$ & needs $\bm M,\bm h$ & needs $k_v$ & error [mm] & ms/solve\\
 \midrule
-T  & $8$ & yes & no  & $0.180$ & $2.60$\\
-V1 & $8$ & yes & \textbf{yes} & \emph{fails} & $2.67$\\
-V0 & $4$ & no  & no  & $\bm{0.120}$ & $\bm{0.10}$\\
+T  & $8$ & yes & no  & $0.180$ & $2.41$ / $3.08$\\
+V1 & $8$ & yes & \textbf{yes} & \emph{fails} & $2.41$ / $3.14$\\
+V0 & $4$ & no  & no  & $\bm{0.120}$ & $\bm{0.086}$ / $\bm{0.115}$\\
 \bottomrule
 \end{tabular}
 \vspace{2pt}
 \\{\footnotesize Error after settling; V0 with command weight tuned. V1 returns
-\texttt{NAN\_DETECTED} at every solve, see text.}
+\texttt{NAN\_DETECTED} at every solve, see text. Solve times are given for two
+runs of the same binary: the errors are deterministic and repeat exactly, the
+absolute timings do not, and the ratio between formulations does.}
 \end{table}
 
 Table~\ref{tab:formulations} reports the comparison, and the outcome is not the
@@ -1109,9 +1125,12 @@ identifying not only a gain but the loop architecture including anti-windup, whi
 is precisely the burden the other two formulations avoid.
 
 \emph{V0 needs no model at all and is not worse.} Once the command weight is
-tuned it settles to $0.120$~mm against $0.180$~mm for T, at $0.086$~ms per solve,
-a factor of thirty faster, with no failures. Its state is half the size and it
-uses neither the inertia matrix nor the bias term.
+tuned it settles to $0.120$~mm against $0.180$~mm for T, with no failures, and it
+solves between twenty-seven and twenty-eight times faster. We quote the ratio
+rather than the absolute time because the ratio is what repeats: across two runs of
+the same binary the settled errors are identical to the digit while the absolute
+solve times move by a third. Its state is half the size and it uses neither the
+inertia matrix nor the bias term.
 
 This yields a clean separation of concerns, which we regard as the practical
 recommendation of this paper:
@@ -1155,27 +1174,18 @@ $\bm J_\ell^{-1}$ in \eqref{eq:logdual} supplies.
 
 \subsection{Real-time implementation}
 \label{sec:realtime}
-Reaching real-time rates required one change whose effect is disproportionate to
-its visibility, and which we report because the failure mode is easy to reach and
-hard to diagnose.
-
-In an initial implementation the symbolic model was assembled with the
-graph-valued expression type of CasADi and the forward dynamics written as
-$\ddot{\bm q}=\mathrm{solve}(\bm M,\bm\tau-\bm h)$. On graph-valued operands this
-does not produce a closed-form expression: it emits a node backed by a numerical
-QR factorization, whose derivatives are obtained by implicit differentiation of
-the linear system and which cannot be expanded to scalar form. With a four-stage
-explicit integrator propagating sensitivities across twenty nodes, that routine is
-evaluated approximately eighty times per solve. The measured cost was $101.6$~ms,
-of which $101.5$~ms was linearization and $0.13$~ms the quadratic program: the
-optimizer was never the bottleneck.
-
-Rebuilding the identical model on the scalar expression type turns the linear
-solve into symbolic Gaussian elimination and yields flat generated code, with the
-timings of Table~\ref{tab:timing}. The controller is unchanged: over a $250$-step
-closed-loop trajectory the two implementations agree to
-$2.2\times10^{-15}\,\mathrm{N}\cdot\mathrm{m}$ in commanded torque and
-$3.1\times10^{-15}$ in state.
+Real-time rates depend on how the forward dynamics is expressed symbolically.
+Writing $\ddot{\bm q}=\mathrm{solve}(\bm M,\bm\tau-\bm h)$ on CasADi's
+graph-valued type emits a node backed by a numerical factorization rather than a
+closed-form expression, differentiated implicitly and evaluated some eighty times
+per solve by the integrator; the cost was $101.6$~ms, of which $101.5$~ms was
+linearization and $0.13$~ms the quadratic program, so the optimizer was never the
+bottleneck. Rebuilding the identical model on the scalar type turns that solve into
+symbolic Gaussian elimination and yields the timings of Table~\ref{tab:timing},
+with the controller unchanged: over $250$ closed-loop steps the two builds agree to
+$2.2\times10^{-15}\,\mathrm{N}\cdot\mathrm{m}$ in commanded torque. We report this
+because the failure mode is easy to reach and presents as a slow solver rather
+than as a modeling error.
 
 \begin{table}[!t]
 \caption{Solve time over $1949$ consecutive solves. $N=20$, $n_x=8$, $n_u=4$.}
@@ -1546,20 +1556,6 @@ resolve the torque constant: a $5\,\%$ error in it produces $0.22$~N, below the
 threshold and indistinguishable from the residual bias of a well-modeled arm. The constant must therefore be identified
 under a known load rather than at rest.
 
-\subsection{Compliance versus rigid behavior}
-\label{sec:res-control}
-Six guidance conditions, each a task pose and a guidance direction, were run twice
-in MuJoCo, once compliant and once rigid. The design is paired, both arms visiting
-the identical conditions, so the between-condition variance is common and cancels.
-The paired differences favor the compliant arm in all six conditions,
-$+1.15\pm0.64$~N in guidance force and $+14.4\pm8.0$~mm in following error,
-giving $t=4.42$ and $t=4.43$ against a two-sided critical value of $2.571$ at five
-degrees of freedom. The unpaired summaries, $3.82\pm0.49$~N against
-$2.67\pm1.09$~N, have overlapping dispersions and would not support the claim at
-$N=6$: the effect is real and the unpaired presentation discards the information
-that establishes it. This confirms that the estimate closes a compliant loop; it
-is not offered as evidence for either contribution.
-
 \subsection{Tracking, regulation, and computation}
 Regulating to a fixed pose from an initial error of $0.160$~m converges to
 $1.65$~mm with success at all $250$ steps. On a slow screw trajectory the
@@ -1616,9 +1612,10 @@ torque upstream of the gearbox, so gearbox friction is unmodeled whether the
 applied torque is read from current or inferred from the velocity loop. This sets
 the irreducible floor and is the quantity most likely to dominate on hardware.
 
-\emph{Statistical scope.} The compliance result rests on six paired conditions in a
-single simulator, and the timing figures vary by $17\,\%$ between two runs of an
-identical build. We report both rather than the more favorable one.
+\emph{Statistical scope.} Every result rests on a single simulator, and the
+timing figures vary by $17\,\%$ in the mean between two runs of an identical
+build, which is why solve times are quoted as ratios and reported for both runs
+rather than for the more favorable one.
 
 \subsection{The experiment that would settle it}
 \label{sec:protocol}
