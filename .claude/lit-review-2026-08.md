@@ -24,12 +24,16 @@ dónde llega el derecho a afirmar.
 | `wong2024sensorobs` | **texto completo, pág. 1-12** | todo lo de abajo |
 | `magrini2014virtual` | extracto verificado (sesión anterior) | todo |
 | `lu2023configopt` | **texto completo, 32 pág.** (vía figshare, ver abajo) | todo lo de abajo |
-| `dewolde2024current` | **solo resumen** | solo lo que dice el resumen |
+| `dewolde2024current` | **texto completo** (arXiv:2403.13079) | todo lo de abajo |
 | resto | resumen | contexto, no diferenciación |
 
-⛔ **Antes de escribir la frase que diferencia contra `lu2023configopt` y
-`dewolde2024current` hay que conseguir el texto completo.** Los dos son los que
-pueden mover una contribución de sitio, y de los dos solo tengo el resumen.
+✅ **Los tres vecinos que pueden mover una contribución de sitio están leídos
+enteros.** Los dos que faltaban se consiguieron el mismo día: Lu por figshare, de
+Wolde por arXiv. El resto se cita solo como contexto, y para eso el resumen alcanza.
+
+⚠️ **Y en los dos casos el resumen daba una impresión equivocada** — en Lu
+subestimaba el solape, en de Wolde lo exageraba. Es la misma regla de la casa: no
+afirmar qué hace un paper sin abrirlo. Un resumen no es abrirlo.
 
 ---
 
@@ -157,22 +161,29 @@ del condicionamiento está establecida; lo de acá es el régimen deficiente.
 
 ## 🟠 EL VECINO DE C2 — de Wolde et al., IROS 2024
 
-`dewolde2024current`. **Solo resumen.** Textual:
+`dewolde2024current`. **Texto completo leído** (arXiv:2403.13079, libre). Brazo
+Kinova GEN3 Lite sobre base móvil.
 
-> *"an adaption of impedance control that can be used on current-controlled robots
-> without the use of force or torque sensors ... A calibration method is designed
-> that enables estimation of the actuators' current/torque ratios and frictions"*
+⚠️ **El resumen daba una impresión equivocada, y a favor nuestro esta vez.** Leído
+el método, la diferencia es mucho más grande de lo que parecía:
 
-Brazo Kinova GEN3 Lite, 5 mm de precisión sin interacción.
+1. **Su calibración va en el sentido CONTRARIO.** Estiman la razón `r` entre
+   corriente y par **del modelo** para convertir un par COMANDADO por el controlador
+   de impedancia en una corriente (su Ec. 6, `c = h(τ)`). La corriente es
+   **salida**, no medición de entrada.
+2. **Nunca estiman la fuerza externa.** Y lo dicen: eligen impedancia justamente
+   porque *"Admittance control faces the challenge of needing sensors to detect
+   external forces"*. No hay `f̂`.
+3. **Su ley SÍ lleva el modelo dinámico**: Ec. (3) es
+   `f = Λ(q)ẍ_d + µ(q,q̇)ẋ_d + f_g − K_d e − D_d ė`, o sea inercia cartesiana y
+   Coriolis dentro del controlador.
+4. El brazo es **comandado por corriente** (interfaz de par). Lo velocity-controlled
+   ahí es la **base móvil**, no el brazo.
 
-**Esto es la cadena `corriente → τ → compliance` en un brazo barato sin sensor F/T,
-publicada en 2024.** Es el vecino más cercano de C2 y hoy no se cita.
-
-**La diferencia que el borrador reclama sigue en pie, pero es más fina de lo
-escrito:** ellos **comandan corriente** (interfaz a nivel de par); acá el servo
-corre su propio lazo interno y lo que se comanda es `q̇`. Esa es justamente la
-distinción que sostiene C2 — y por eso hay que enunciarla contra este paper, no en
-el vacío.
+**Delta, ya escrito en Related Work:** acá la corriente es una **medición** de la
+que se infiere `τ_ext` y `f̂`, lo comandado es `q̇`, el actuador cierra su lazo
+abajo, y el modelo dinámico queda **confinado al observador**. Son cadenas
+opuestas, no variantes.
 
 ⚠️ Y `scherzinger2022fdcc` ya midió que la **interfaz de velocidad es mejor que la
 de posición** para compliance en robots comerciales. O sea: *"velocidad para
@@ -235,12 +246,10 @@ DOI/arXiv funciona. Descubrimiento por WebSearch, metadatos por DOI.
 
 ## Lo que falta para cerrar la condición 1
 
-1. **Texto completo de `lu2023configopt` y `dewolde2024current`** — son los dos que
-   pueden mover una contribución de sitio y hoy solo tengo el resumen.
-2. **Reescribir el posicionamiento contra `wong2024sensorobs`**, que es trabajo
-   nuevo y en T-RO. Sin eso el borrador se lee como reinvención de un índice de
-   observabilidad direccional.
-3. Barrer las citas **hacia adelante** de `magrini2014virtual` y `wong2024sensorobs`
-   (quién los citó): es donde vive el trabajo que esta búsqueda pudo no ver.
+1. ✅ **Texto completo de los tres vecinos** — hecho el 03/08/2026.
+2. ✅ **Posicionamiento reescrito** contra los tres, en Related Work y en Sec. IV.
+3. ⛔ Barrer las citas **hacia adelante** de `magrini2014virtual` y
+   `wong2024sensorobs` (quién los citó): es donde vive el trabajo que esta búsqueda
+   pudo no ver. **Es lo único que queda de la condición 1.**
 4. Bajar los fuentes LaTeX de los que estén en arXiv a `paper_refs/src_corpus/`
    para el pase léxico de `lint_prose.py --sweep` (pendiente ya registrado).

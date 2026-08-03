@@ -364,12 +364,18 @@ payload recalibration~\cite{shan2024payload}, and disturbance observers with
 learned friction models have been used on industrial
 arms~\cite{liu2021sensorless}; direct teaching driven by current-inferred torque
 has been demonstrated on a surgical assistant~\cite{zhang2021forcefree}. Closest
-to the actuation regime considered here, de Wolde \emph{et al.} adapt impedance
-control to current-controlled arms without force or torque sensors, calibrating
-the actuator current-to-torque ratios and friction~\cite{dewolde2024current}. That
-work commands current, so the actuator remains a torque interface; the arm
-considered here exposes a velocity command and closes its own inner loop, which is
-what makes the model assignment of Section~\ref{sec:velocity} necessary. On the
+to the hardware considered here, de Wolde \emph{et al.} bring impedance control to
+a current-controlled arm without force or torque sensors, calibrating the actuator
+current-to-torque ratios and the joint friction from the robot model and
+gravity~\cite{dewolde2024current}. Their calibration runs in the opposite direction
+to the one used here: it converts a commanded joint torque into a current, so the
+current is an output and the external force is never estimated, which is precisely
+why impedance rather than admittance is the natural choice there. Their control law
+also retains the Cartesian inertia and Coriolis terms. The chain of
+Section~\ref{sec:velocity} instead reads a \emph{measured} current, infers the
+external joint torque and the contact force from it, and issues a joint velocity;
+the actuator closes its own loop underneath, and the dynamic model stays inside
+the observer. On the
 control side, admittance is the standard route to compliance on
 position-controlled hardware~\cite{keemink2018admittance,zhu2025compliantsurvey},
 and a velocity interface has been reported to yield smoother compliant behavior
