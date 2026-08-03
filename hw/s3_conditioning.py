@@ -8,9 +8,17 @@ Verifica en hardware la prediccion falsable del paper:
 Son DOS partes, y miden cosas distintas. Confundirlas fue el primer diseño de
 este script y estaba mal (ver abajo).
 
-  A. LEY DE ESCALA (sin pesa).  La ley es sobre AMPLIFICACION DE RUIDO. Se mide
+⚠️⚠️ LAS DOS PARTES SON OBLIGATORIAS PARA EL PAPER. Correr solo la A fue el plan
+    original y NO ALCANZA — lo señalo la revision del asesor (02/08/2026) y es
+    correcto: un ensayo sin carga conocida valida ruido, deriva y dependencia
+    postural, pero NO PUEDE validar ni la exactitud de la fuerza ni la
+    mal-atribucion fuerza-momento, que es la tesis central del trabajo. La parte
+    A sigue siendo la mas barata y la unica que verifica la LEY, pero sola deja
+    la contribucion principal sin evidencia fisica.
+
+  A. LEY DE ESCALA (sin carga).  La ley es sobre AMPLIFICACION DE RUIDO. Se mide
      la DISPERSION de f_est muestra a muestra con el brazo quieto, y se verifica
-     que std(f_est) crece como 1/sigma_min. No hace falta pesa, ni modelo de
+     que std(f_est) crece como 1/sigma_min. No hace falta carga, ni modelo de
      gravedad, ni que el brazo cargue nada.
 
      ⚠️ ESTA PARTE NO SE PUEDE ENSAYAR EN SIMULACION. MuJoCo es determinista: en
@@ -19,8 +27,24 @@ este script y estaba mal (ver abajo).
      que el simulador NO TIENE. Por eso es un experimento de hardware y no otra
      corrida de sim.
 
-  B. EXACTITUD (con pesa conocida).  Mide el SESGO, no la dispersion. Es una
-     afirmacion distinta y complementaria.
+  B. EXACTITUD Y MAL-ATRIBUCION (con carga conocida).  Mide el SESGO, no la
+     dispersion, y ademas corre LOS DOS ESTIMADORES sobre el MISMO residuo. Es la
+     unica parte que puede refutar la Seccion IV: si el inverso 6-D recupera la
+     fuerza igual de bien que el de contacto puntual, la contribucion principal
+     cae. No hace falta un sensor F/T de seis ejes.
+
+     DOS DIRECCIONES, no una. Una sola direccion (pesa colgada) no distingue un
+     estimador sesgado de uno que solo acierta en vertical, y sobre todo no
+     expone el momento espurio: con f puramente vertical el reparto 6-D puede
+     quedar chico por casualidad geometrica. La segunda direccion es tiro
+     HORIZONTAL con una balanza de equipaje o dinamometro.
+
+       --mass 0.2                masa colgada, f = (0,0,-mg), exacta
+       --pull 2.0 --pull-axis x  tiro horizontal, |f| leido de la balanza
+
+     ⚠️ El tiro horizontal es el que valida la junta de la base: una fuerza
+     vertical no hace momento sobre un eje vertical, asi que la pesa deja esa
+     junta sin excitar (ver hw/README.md).
 
      ⚠️ SOSTENER EL BRAZO EN MODO POSICION, no en velocidad. La forma diferencial
      asume el MISMO Jv en las dos medidas, y colgar la pesa hunde el brazo. Medido
@@ -43,24 +67,28 @@ este script y estaba mal (ver abajo).
      "refutado" la Sec. IV por un error del test.
 
 ═══ POR QUE ESTE Y NO LA CAMPAÑA COMPLETA ═══
-Es lo mas barato que convierte "todo es simulacion" en "la prediccion central se
-verifico en hardware":
+Es lo mas barato que convierte "todo es simulacion" en "las predicciones centrales
+se verificaron en hardware":
 
   - NO necesita lazo de control: ni NMPC, ni admitancia, ni compliance.
   - NO necesita el bus a 100 Hz. Es estatico; con 10 Hz sobra, asi que S0 deja
     de ser bloqueante.
-  - La parte A NI SIQUIERA NECESITA LA PESA.
+  - NO necesita sensor F/T: una masa colgada y una balanza de equipaje.
 
 Hace falta: servos alimentados, leer Present_Current, y llevar el brazo a cuatro
-posturas. La pesa solo para la parte B.
+posturas. Una masa (~0.2 kg) y una balanza de equipaje para la parte B.
 
 ═══ CRITERIO ═══
 Parte A: ajustar log(std f_est) contra log(sigma_min). Prediccion: pendiente -1.
   PASA   pendiente en [-1.4, -0.6] y R2 > 0.8
   FALLA  pendiente ~0  =>  la Seccion IV del paper esta mal y hay que reescribirla
 
-Run:  python3 s3_conditioning.py --port /dev/ttyUSB0            # solo parte A
-      python3 s3_conditioning.py --port /dev/ttyUSB0 --mass 0.2 # A y B
+Parte B: sobre el MISMO residuo, error del 3-D contra error del 6-D.
+  PASA   el 3-D gana claramente Y el 6-D produce momento espurio no nulo
+  FALLA  los dos empatan  =>  la contribucion principal no se sostiene en hardware
+
+Run:  python3 s3_conditioning.py --port /dev/ttyUSB0 --mass 0.2 --pull 2.0
+      python3 s3_conditioning.py --port /dev/ttyUSB0            # solo parte A
 """
 import argparse
 import os
@@ -76,8 +104,23 @@ import dxl_io
 from arm_kinematics import build_jac_fn
 
 fJ = build_jac_fn()
-Jv_ = lambda q: np.array(fJ(q))[:3, :]
+J_ = lambda q: np.array(fJ(q))            # 6x4
+Jv_ = lambda q: np.array(fJ(q))[:3, :]    # 3x4
 G = 9.81
+
+
+def est_3d(q, tau):
+    """Contacto puntual en punto conocido: Jv^T f = tau, SOBRE-determinado."""
+    return np.linalg.lstsq(Jv_(q).T, tau, rcond=None)[0]
+
+
+def est_6d(q, tau):
+    """Wrench completo min-norm: J^T F = tau, INDETERMINADO (6 incognitas, 4 ec.).
+    Devuelve (fuerza, momento). El momento deberia ser CERO —la carga es una
+    fuerza pura— y no lo es: eso es la mal-atribucion que el paper reporta."""
+    J = J_(q)
+    F = J @ np.linalg.lstsq(J.T @ J, tau, rcond=None)[0]
+    return F[:3], F[3:]
 
 # Cuatro posturas escalonadas en log(sigma_min), todas validadas en MuJoCo:
 # sin contacto, z_ee > 0.08 m, 0.15 rad de margen contra topes, y con la pesa
@@ -178,42 +221,104 @@ def part_A(arm):
     return S, D, np.nan, np.nan
 
 
-def part_B(arm, mass):
-    """Exactitud contra pesa conocida. Mide SESGO, no dispersion."""
-    f_true = np.array([0.0, 0.0, -mass*G])
+AXES = {"x": np.array([1.0, 0.0, 0.0]), "y": np.array([0.0, 1.0, 0.0])}
+
+
+def _load_case(arm, q_ref, f_true, apply_sim):
+    """Diferencial CON-SIN sobre una postura. Devuelve (qm, dtau, dq, dJ/J)."""
+    M = {}
+    for lab in ("SIN", "CON"):
+        ask(f"  Carga {lab} aplicada. Enter cuando este quieto... ")
+        if SIM:
+            apply_sim(lab == "CON"); _place(arm, q_ref)
+        time.sleep(SETTLE)                    # re-asentar: cambia la stiction
+        Q = []; T = []
+        for _ in range(NSAMP):
+            q, qd, tau = arm.read(); Q.append(q); T.append(tau)
+            if not SIM: time.sleep(0.01)
+        M[lab] = (np.mean(Q, 0), np.mean(T, 0))
+    dq = float(np.linalg.norm(M["CON"][0] - M["SIN"][0]))
+    qm = 0.5*(M["SIN"][0] + M["CON"][0])
+    dJ = float(np.linalg.norm(Jv_(M["CON"][0]) - Jv_(M["SIN"][0]))
+               / np.linalg.norm(Jv_(qm)))
+    return qm, M["CON"][1] - M["SIN"][1], dq, dJ
+
+
+def part_B(arm, mass=None, pull=None, pull_axis="x"):
+    """Exactitud y mal-atribucion contra carga conocida, en DOS direcciones.
+
+    Mide SESGO, no dispersion, y corre los DOS estimadores sobre el MISMO
+    residuo. Es la unica parte que puede refutar la Seccion IV en hardware.
+    """
+    cases = []
+    if mass:
+        cases.append(("colgada", np.array([0.0, 0.0, -mass*G]),
+                      lambda on, m=mass: arm.hang(m if on else 0.0)))
+    if pull:
+        u = AXES[pull_axis]
+        cases.append((f"tiro {pull_axis}", pull*u,
+                      lambda on, v=pull*u: arm.push(v if on else np.zeros(3))))
+    if not cases:
+        return None
+
     print("\n" + "=" * 74)
-    print(f"PARTE B — exactitud.  Pesa {mass:.3f} kg  ->  |f| = "
-          f"{np.linalg.norm(f_true):.3f} N")
-    print("⚠️ Sostener el brazo RIGIDO. Si se hunde al colgar la pesa, el")
+    print("PARTE B — exactitud y mal-atribucion, con carga conocida")
+    print("⚠️ Sostener el brazo RIGIDO. Si se hunde al aplicar la carga, el")
     print("   Jacobiano cambia y el sesgo tapa el efecto que se quiere medir.")
     print("=" * 74)
+
     out = []
-    for p, (q_ref, _) in enumerate(POSES):
-        print(f"\nPOSTURA {p+1}/4   q = {np.round(q_ref,3)}")
-        ask("  Llevar el brazo a esa postura y fijarlo. Enter... ")
-        _place(arm, q_ref)
-        M = {}
-        for lab in ("SIN", "CON"):
-            ask(f"  Pesa {lab} colgada. Enter cuando este quieto... ")
-            if SIM:
-                arm.hang(mass if lab == "CON" else 0.0); _place(arm, q_ref)
-            time.sleep(SETTLE)                # re-asentar: cambia la stiction
-            Q = []; T = []
-            for _ in range(NSAMP):
-                q, qd, tau = arm.read(); Q.append(q); T.append(tau)
-            if not SIM: time.sleep(0.01)
-            M[lab] = (np.mean(Q, 0), np.mean(T, 0))
-        dq = np.linalg.norm(M["CON"][0] - M["SIN"][0])
-        qm = 0.5*(M["SIN"][0] + M["CON"][0])
-        dJ = np.linalg.norm(Jv_(M["CON"][0]) - Jv_(M["SIN"][0]))/np.linalg.norm(Jv_(qm))
-        f_hat = -np.linalg.lstsq(Jv_(qm).T, M["CON"][1] - M["SIN"][1], rcond=None)[0]
-        e = np.linalg.norm(f_hat - f_true)
-        out.append((np.linalg.svd(Jv_(qm), compute_uv=False)[2], e, dq, dJ))
-        print(f"  |f_est| {np.linalg.norm(f_hat):6.3f} N   error {e:6.3f} N   "
-              f"hundimiento |dq| {dq:.4f} rad   dJ/J {100*dJ:.1f} %")
-        if dJ > 0.03:
-            print("  ⚠️ dJ/J > 3 %: el brazo se hundio y la forma diferencial queda")
-            print("     contaminada. Sostener mas rigido o usar una pesa menor.")
+    for name, f_true, apply_sim in cases:
+        print(f"\n--- CARGA '{name}'   f_true = {np.round(f_true,3)}   "
+              f"|f| = {np.linalg.norm(f_true):.3f} N ---")
+        if "tiro" in name:
+            print("   Tirar del efector con la balanza de equipaje a lo largo del")
+            print(f"   eje {pull_axis} del mundo, y sostener la lectura estable.")
+        for p, (q_ref, _) in enumerate(POSES):
+            print(f"\nPOSTURA {p+1}/{len(POSES)}   q = {np.round(q_ref,3)}")
+            ask("  Llevar el brazo a esa postura y fijarlo. Enter... ")
+            _place(arm, q_ref)
+            qm, dtau, dq, dJ = _load_case(arm, q_ref, f_true, apply_sim)
+            # el residuo de la carga es -dtau: el par del servo la COMPENSA
+            f3 = est_3d(qm, -dtau)
+            f6, m6 = est_6d(qm, -dtau)
+            e3 = float(np.linalg.norm(f3 - f_true))
+            e6 = float(np.linalg.norm(f6 - f_true))
+            sig = float(np.linalg.svd(Jv_(qm), compute_uv=False)[2])
+            out.append((name, sig, e3, e6, float(np.linalg.norm(m6)), dq, dJ))
+            print(f"  sigma_min {sig:.4f}")
+            print(f"  3-D contacto puntual  |f| {np.linalg.norm(f3):6.3f} N   "
+                  f"error {e3:6.3f} N")
+            print(f"  6-D min-norm          |f| {np.linalg.norm(f6):6.3f} N   "
+                  f"error {e6:6.3f} N   |momento espurio| {np.linalg.norm(m6):6.3f} N.m")
+            print(f"  hundimiento |dq| {dq:.4f} rad   dJ/J {100*dJ:.1f} %")
+            if dJ > 0.03:
+                print("  ⚠️ dJ/J > 3 %: el brazo se hundio y la forma diferencial")
+                print("     queda contaminada. Sostener mas rigido o bajar la carga.")
+
+    print("\n" + "-"*74)
+    E3 = np.array([r[2] for r in out]); E6 = np.array([r[3] for r in out])
+    Msp = np.array([r[4] for r in out])
+    DJ = np.array([r[6] for r in out])
+    bad = int(np.sum(DJ > 0.03))
+    print(f"  error medio   3-D {E3.mean():.3f} N     6-D {E6.mean():.3f} N")
+    print(f"  momento espurio del 6-D:  medio {Msp.mean():.3f} N.m   "
+          f"max {Msp.max():.3f} N.m   (deberia ser 0)")
+    print(f"  posturas con dJ/J > 3 %: {bad}/{len(out)}")
+    if bad:
+        print(f"\n  SIN VEREDICTO — {bad} de {len(out)} posturas quedaron")
+        print("  contaminadas por el hundimiento. El brazo no se sostuvo rigido:")
+        print("  los numeros de arriba mezclan el efecto que se quiere medir con")
+        print("  un cambio de Jacobiano. Sostener mas rigido (modo posicion) o")
+        print("  bajar la carga, y repetir. NO reportar esto en el paper.")
+    elif E6.mean() > 1.5*E3.mean() and Msp.mean() > 0.05:
+        print("\n  PARTE B PASA — el 6-D pierde fuerza y genera momento espurio")
+        print("  sobre hardware. La Seccion IV queda verificada fisicamente.")
+    elif E6.mean() < 1.2*E3.mean():
+        print("\n  PARTE B FALLA — los dos estimadores empatan. La contribucion")
+        print("  principal no se sostiene en hardware y hay que reescribirla.")
+    else:
+        print("\n  NO CONCLUYE: la separacion entre estimadores es debil.")
     return out
 
 
@@ -223,7 +328,12 @@ def main():
     ap.add_argument("--baud", type=int, default=1_000_000)
     ap.add_argument("--ids", type=int, nargs="+", default=[1, 2, 3, 4])
     ap.add_argument("--mass", type=float, default=None,
-                    help="kg de la pesa; omitir para correr solo la parte A")
+                    help="kg de la masa colgada (direccion vertical de la parte B)")
+    ap.add_argument("--pull", type=float, default=None,
+                    help="N de tiro horizontal leidos de la balanza de equipaje "
+                         "(segunda direccion de la parte B)")
+    ap.add_argument("--pull-axis", default="x", choices=["x", "y"],
+                    help="eje de mundo del tiro horizontal")
     ap.add_argument("--sim", action="store_true",
                     help="ENSAYO EN SECO contra MuJoCo: sin hardware y sin prompts. "
                          "Verifica el flujo del script, NO produce resultados "
@@ -246,17 +356,25 @@ def main():
         arm = mj_arm.MjArm(); arm.set_velocity_mode()
     else:
         arm = dxl_io.DxlArm(port=args.port, baud=args.baud, ids=args.ids)
+    if not (args.mass or args.pull):
+        print("\n⚠️ Sin --mass ni --pull corre SOLO la parte A. Alcanza para")
+        print("   verificar la ley 1/sigma_min, pero NO valida la exactitud de la")
+        print("   fuerza ni la mal-atribucion fuerza-momento: para el paper hacen")
+        print("   falta las dos partes, y la B en DOS direcciones.")
+
     try:
         arm.enable(False)
         S, D, slope, r2 = part_A(arm)
-        B = part_B(arm, args.mass) if args.mass else None
+        B = part_B(arm, args.mass, args.pull, args.pull_axis)
     finally:
         arm.close()
 
     np.savez(os.path.join(HERE, "s3_result.npz"), sigma=S, std_f=D,
              slope=slope, r2=r2,
-             partB=np.array(B) if B else np.array([]),
-             mass=args.mass if args.mass else 0.0)
+             partB=np.array(B, dtype=object) if B else np.array([]),
+             mass=args.mass if args.mass else 0.0,
+             pull=args.pull if args.pull else 0.0,
+             pull_axis=args.pull_axis)
     print("\nguardado -> s3_result.npz")
 
 

@@ -81,6 +81,7 @@ class MjArm:
                     for a in ACTS]
         self.tip = mujoco.mj_name2id(self.m, mujoco.mjtObj.mjOBJ_BODY, TIP_BODY)
         self.payload = 0.0
+        self.ext_f = np.zeros(3)     # fuerza extra en el tip, mundo [N]
         self.enabled = False
         self.rng = np.random.default_rng(seed)
         mujoco.mj_forward(self.m, self.d)
@@ -135,15 +136,21 @@ class MjArm:
 
     # ── utilidades del banco ─────────────────────────────────────────────────
     def _step(self, n=1):
-        if self.payload > 0.0:
-            self.d.xfrc_applied[self.tip, :3] = [0.0, 0.0, -self.payload*G]
-        else:
-            self.d.xfrc_applied[self.tip, :] = 0.0
+        self.d.xfrc_applied[self.tip, :] = 0.0
+        self.d.xfrc_applied[self.tip, :3] = self.ext_f + \
+            np.array([0.0, 0.0, -self.payload*G])
         for _ in range(n):
             self.mj.mj_step(self.m, self.d)
 
     def hang(self, mass_kg):
+        """Masa colgada del tip: fuerza vertical hacia abajo."""
         self.payload = float(mass_kg)
+
+    def push(self, f_world):
+        """Fuerza arbitraria en el tip, en coordenadas de mundo [N].
+        Es lo que en hardware hace un tiro con balanza de equipaje; `hang` solo
+        cubre la direccion vertical y deja la junta de la base sin excitar."""
+        self.ext_f = np.asarray(f_world, float).reshape(3)
 
     def set_state(self, q):
         for k, i in enumerate(self.qadr):

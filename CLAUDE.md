@@ -46,32 +46,85 @@ abrirlo.
 cuantificación global, estructura direccional, fallo silencioso de la correlación,
 gating por condicionamiento, y todo el régimen de actuación en velocidad.
 
-## Las tres contribuciones, y su experimento
+## Reencuadre acordado con el asesor (02/08/2026)
 
-1. **Para `n<6` decide el modelo de contacto, no el rango del Jacobiano.**
-   El inverso 6-D min-norm está indeterminado y reparte la fuerza como momento
-   espurio: pierde **50.5%** en promedio sobre 2197 configuraciones (peor caso
-   99.6%) y **falla en silencio**, con correlación 0.997 contra verdad. El inverso
-   de contacto puntual es exacto si `rank(Jv)=3`, que se cumple en el 100%.
-   Contra MuJoCo: RMSE **2.227 → 0.157 N**, factor 14.
-   → `observability_map.py`, `test_direction_sweep.py`, `mj_wrench_test.c`
+El paquete alcanza para Access **como contribución integrada, no como cinco
+novedades independientes**. El marco:
 
-2. **El modelo dinámico lo necesita el ESTIMADOR, no el controlador.**
-   De las tres formulaciones posibles bajo actuación en velocidad, la dinámica
-   (V1) es mal planteada sin identificar el lazo del servo y falla en todos los
-   solves; la cinemática (V0) no usa `M`, `h` ni `kv` y **iguala a la de par a
-   1/25 del costo**.
-   → `generate_arm_vel_ocp.py`, `test_vel_vs_torque.py`
+> *A quantitative design framework for point-contact force estimation on low-DoF,
+> velocity-actuated manipulators.*
 
-3. **Compliance en dos regímenes, separados por la capacidad del actuador.**
-   El brazo ejerce 3.9-5.9 N en su peor dirección; el guiado manual pide 5-15 N.
-   Por debajo la compliance es sintética, por encima el actuador satura y es
-   física. Transición medida: `ee/ref` pasa de ~1 a ~1.9 y la saturación de 0% a
-   100% entre 5 y 6 N.
-   → `reproduce_paper_tables.py`
+Y una sola pregunta aplicada:
+
+> *Given a low-DoF arm with velocity-controlled smart servos, what contact force
+> is identifiable, with what accuracy, and how can it be used for compliant
+> interaction?*
+
+**Jerarquía. No son tres contribuciones al mismo nivel:**
+
+| | qué es | rol |
+|---|---|---|
+| **1** | caracterización cuantitativa y geométrica de la inversión bajo modelo de contacto conocido | **principal** |
+| **2** | arquitectura de estimación y compliance para brazos low-DoF actuados en velocidad | **co-principal** |
+| **3** | el NMPC | **demostrador de integración**, no contribución matemática |
+
+Dentro del marco 1: `P_ff` explica y **predice** la estructura direccional; el
+barrido cuantifica magnitud y prevalencia; `σ_min(Jv)` lo vuelve criterio
+operativo; el estudio de correlación muestra por qué una validación aparentemente
+buena esconde error grande.
+
+⚠️ **El 50.5% NO es contribución por sí solo.** Pertenece a este brazo, este
+espacio de trabajo y esta distribución de fuerzas. Vale cuando `P_ff` lo
+**explica y predice**, no cuando solo se mide. Escribirlo así.
+
+⚠️ **La contribución 2 no puede sostenerse en *"un controlador cinemático no
+necesita `M` ni `h`"***, que aislado es conocido. Lo defendible es la **cadena
+completa**:
+
+```
+corriente del servo → τ_act → τ_ext → f̂ → q̇_cmd
+```
+
+y demostrar que: el lazo interno no aparece en la reconstrucción si el par
+aplicado se mide; su ganancia no hace falta identificarla; el modelo dinámico
+queda **confinado al observador**; la aceleración aporta poco en este régimen; la
+implementación cinemática conserva el comportamiento compliant; y todo eso
+sobrevive a corriente real, fricción, stiction y cuantización.
+
+**Tres condiciones para que alcance**, y ninguna está cumplida hoy:
+
+1. la revisión bibliográfica confirma que nadie reunió antes esa caracterización;
+2. el hardware valida **la predicción direccional, el efecto del condicionamiento
+   y la viabilidad del par inferido desde corriente**;
+3. las afirmaciones se calibran: el gating y el fallo de correlación son
+   *consecuencias útiles*, no "métodos nuevos".
+
+**Compresión acordada:** conservar `P_ff`, barrido direccional, workspace,
+hardware, arquitectura de velocidad y la comparación cinemático vs dinámico.
+Reducir dual quaternions, ablaciones de error de pose y comparaciones de control
+que no sostengan las dos contribuciones. **Eliminar el lenguaje de *"exact
+recovery"* fuera del modelo ideal**: en hardware se habla de consistencia, error y
+sensibilidad.
+
+## Evidencia por contribución
+
+**C1** — el inverso 6-D min-norm está indeterminado y reparte la fuerza como
+momento espurio: pierde **50.5%** en promedio sobre 2197 configuraciones (peor
+caso 99.6%) y **falla en silencio**, con correlación 0.997 contra verdad. El de
+contacto puntual es exacto si `rank(Jv)=3`, que se cumple en el 100%. Contra
+MuJoCo: RMSE **2.227 → 0.157 N**.
+→ `observability_map.py`, `test_direction_sweep.py`, `mj_wrench_test.c`
 
 Más: la cota `‖δf‖ ≤ ‖δτ‖/σ_min(Jv)` **verificada en la planta MuJoCo** con ruido
 inyectado — pendiente −0.872, R² 0.980. → `hw/test_conditioning_law.py`
+
+**C2** — de las tres formulaciones bajo actuación en velocidad, la dinámica (V1)
+es mal planteada sin identificar el lazo del servo y falla en todos los solves; la
+cinemática (V0) no usa `M`, `h` ni `kv` y **iguala a la de par a 1/25 del costo**.
+Compliance en dos regímenes separados por la capacidad del actuador: el brazo
+ejerce 3.9-5.9 N en su peor dirección, el guiado manual pide 5-15 N; `ee/ref` pasa
+de ~1 a ~1.9 y la saturación de 0% a 100% entre 5 y 6 N.
+→ `generate_arm_vel_ocp.py`, `test_vel_vs_torque.py`, `reproduce_paper_tables.py`
 
 ---
 
@@ -172,15 +225,41 @@ Regenerar solvers: `python3 generate_arm_dqnmpc_ocp.py`, `generate_arm_vel_ocp.p
 
 `hw/README.md` tiene el plan completo. Lo esencial:
 
-**Lo único que hace falta correr para el paper: S3 parte A.**
-`hw/s3_conditioning.py --port /dev/ttyUSB0`. Par deshabilitado, sin pesa, sin lazo
-de control, bus a 10 Hz alcanza. Cuatro posturas a mano. Una tarde.
+**Lo que hace falta correr para el paper: S3, LAS DOS PARTES.**
 
-Convierte *"todo es simulación"* en *"la predicción central se verificó en
-hardware"*.
+```bash
+python3 hw/s3_conditioning.py --port /dev/ttyUSB0 --mass 0.2 --pull 2.0
+```
 
-⚠️ **Puede FALLAR.** Pendiente ~0 significa que la Sec. IV del paper está mal.
-Está diseñado para decirlo fuerte, no para disimularlo.
+Par deshabilitado, sin lazo de control, bus a 10 Hz alcanza, cuatro posturas a
+mano. No hace falta sensor F/T: una masa (~0.2 kg) y una balanza de equipaje.
+
+| parte | qué valida | necesita |
+|---|---|---|
+| **A** | la ley `‖δf‖ ≤ ‖δτ‖/σ_min` — amplificación de ruido | nada colgado |
+| **B** | exactitud **y mal-atribución fuerza–momento** | carga conocida, **dos direcciones** |
+
+⚠️ **Correr solo la parte A NO ALCANZA** — corregido tras la revisión del asesor.
+Un ensayo sin carga conocida valida ruido, deriva y dependencia postural, pero no
+puede validar ni la exactitud de la fuerza ni la mal-atribución, que es la tesis
+central. La parte B corre **los dos estimadores sobre el mismo residuo** y reporta
+el momento espurio del 6-D, que debería ser cero.
+
+⚠️ **Dos direcciones, no una.** La pesa colgada deja la junta de la base sin
+excitar (fuerza vertical no hace momento sobre eje vertical) y una sola dirección
+no distingue un estimador sesgado de uno que solo acierta en vertical. La segunda
+es tiro horizontal con balanza de equipaje: `--pull 2.0 --pull-axis x`.
+
+⚠️ **Puede FALLAR, y las dos partes están diseñadas para decirlo fuerte.**
+Pendiente ~0 en A significa que la Sec. IV está mal. Empate entre estimadores en B
+significa que la contribución principal no se sostiene en hardware.
+
+⚠️ **El veredicto de B está gateado por `dJ/J`.** Si el brazo se hunde al aplicar
+la carga (>3% en cualquier postura) el script imprime **SIN VEREDICTO** en vez de
+un resultado: el Jacobiano cambió entre las dos medidas y el número mezcla el
+efecto con el hundimiento. En el ensayo en seco contra MuJoCo da 8/8 contaminadas
+—el banco tiene lazo de velocidad blando—; el modo posición del MX-28 es mucho más
+rígido. Sostener rígido o bajar la carga.
 
 ⚠️ **La tabla de control de `hw/dxl_io.py` NO está verificada** contra el servo
 real. S0 la sondea sin habilitar par. Correr S0 antes de mover un motor.
@@ -206,12 +285,21 @@ hace momento sobre eje vertical. Necesita tiro horizontal.
 
 ## Pendientes, en orden
 
-1. **Autoría** — decisión del autor. Los coautores actuales se replicaron del otro
-   paper de Access y **eso no se hereda**.
-2. **S3 parte A** en hardware.
-3. Corpus de referencia en `paper_refs/src_corpus/` para el barrido léxico del
-   revisor (`lint_prose.py --sweep`). Hoy solo cubre ortografía y AI-tells.
-4. Repetir la Sec. VII con V0 en vez de T. Declarado equivalente y demostrado en
+1. **Reescribir el posicionamiento contra Magrini** como extensión cuantitativa y
+   orientada a diseño. Es lo que bloquea el envío.
+2. **Aplicar la jerarquía acordada** (C1 principal, C2 co-principal, NMPC como
+   demostrador) y comprimir según la lista de arriba.
+3. **S3, las dos partes**, en hardware.
+4. **Búsqueda bibliográfica amplia.** 16 referencias es poco, y menos para
+   sostener una afirmación negativa. Es la condición 1 del asesor.
+5. **Autoría: un solo autor.** Quitar afiliaciones 2 y 3, corresponding,
+   financiamiento, agradecimiento y biografías. Se replicaron del otro paper de
+   Access y **eso no se hereda**.
+6. Correcciones puntuales del asesor: abstract (*"of the real servo"* se lee como
+   dato real), *under-actuated* → *low-DoF*, y desambiguar 0.99 N vs 0.264 N.
+7. Corpus de referencia en `paper_refs/src_corpus/` para el barrido léxico
+   (`lint_prose.py --sweep`). Hoy solo cubre ortografía y AI-tells.
+8. Repetir la Sec. VII con V0 en vez de T. Declarado equivalente y demostrado en
    el lazo compliant, pero un revisor puede pedirlo.
 
 **Lo que sacaría si hay que acortar:** Sec. VII-F (compliant vs rígido, N=6) y la

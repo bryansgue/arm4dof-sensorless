@@ -95,6 +95,41 @@ Magrini establece el hecho dimensional y muestra UN caso. No hace:
 ⇒ Reformular como **extensión cuantitativa y orientada a diseño**, no como
 descubrimiento del problema dimensional.
 
+## El marco acordado (02/08/2026)
+
+> *A quantitative design framework for point-contact force estimation on low-DoF,
+> velocity-actuated manipulators.*
+>
+> *Given a low-DoF arm with velocity-controlled smart servos, what contact force
+> is identifiable, with what accuracy, and how can it be used for compliant
+> interaction?*
+
+Jerarquía: **C1** caracterización cuantitativa y geométrica de la inversión
+(principal) · **C2** arquitectura de estimación y compliance bajo actuación en
+velocidad (co-principal) · **NMPC** demostrador de integración, no contribución
+matemática.
+
+⚠️ El **50.5% no es contribución por sí solo**: es de este brazo, este workspace y
+esta distribución de fuerzas. Su valor aparece cuando `P_ff` lo **explica y
+predice**.
+
+⚠️ **C2 no se sostiene en *"el controlador cinemático no necesita M ni h"***, que
+aislado es conocido. Lo defendible es la cadena `corriente → τ_act → τ_ext → f̂ →
+q̇_cmd` con las seis demostraciones listadas en `CLAUDE.md`.
+
+⚠️ **Fuera del modelo ideal no se dice *"exact recovery"***. En hardware:
+consistencia, error y sensibilidad.
+
+Condiciones para que alcance: (1) la búsqueda bibliográfica confirma que nadie
+reunió antes la caracterización; (2) el hardware valida predicción direccional,
+efecto del condicionamiento y viabilidad del par desde corriente; (3) gating y
+fallo de correlación se presentan como consecuencias, no como métodos nuevos.
+
+⚠️ **Un ensayo sin carga conocida no valida la tesis.** Valida ruido, deriva y
+dependencia postural. Para exactitud y mal-atribución hace falta carga conocida en
+**dos direcciones** y posturas bien/mal condicionadas — sin sensor F/T. Ya está en
+`hw/s3_conditioning.py` (`--mass`, `--pull`).
+
 ## Riesgos de revisor identificados
 
 1. **"Esto es elemental"** — mitigado por el párrafo de "no reclamado como nuevo" y
