@@ -690,17 +690,27 @@ so $\sigma_{\min}(\Jv)$ bounds the amplification of residual error into force
 error and replaces observability as the quantity to map.
 
 That Jacobian conditioning governs the accuracy of residual-based force estimation
-is known, and has been exploited prescriptively: Lu \emph{et al.} optimize the
-configurations of a six-joint industrial robot using the Jacobian condition number
-as the indicator, reducing the effect of modeling error without reducing the error
-itself~\cite{lu2023configopt}. Two things differ here. The bound
-\eqref{eq:noise} is stated on the point-contact inverse rather than on the
-six-dimensional one, so it applies in the regime where the six-dimensional
-inverse is not merely ill-conditioned but indeterminate; and
-$\sigma_{\min}(\Jv)$ is used as a gate that declines to report, rather than as an
-objective to maximize, because on a four-joint arm the posture is often dictated
-by the task and not available as a free variable. The bound is verified as a law on
-the simulated plant in Section~\ref{sec:res-cond}.
+is established. Lu \emph{et al.} bound the relative force error of a six-joint
+industrial robot by the condition number of $\bm J^{\!\top}$ times the relative
+residual error, map that condition number over half a million sampled
+configurations, and then optimize the task path and end-effector pose to lower it,
+thereby suppressing the effect of modeling error without reducing the error
+itself~\cite{lu2023configopt}.
+
+Three things differ here, and they follow from the regime rather than from the
+technique. Their reconstruction inverts $\bm J^{\!\top}$ directly, which presumes
+it is square and invertible; for $n<6$ that inverse does not exist, and
+\eqref{eq:noise} is instead an absolute bound on the over-determined point-contact
+inverse \eqref{eq:threesol}, whose relevant quantity is the smallest singular value
+of $\Jv$ rather than a condition number of $\Jfull$. Their workspace study maps the
+\emph{index}; Section~\ref{sec:sweep} maps the \emph{error}, and shows that its
+dominant component is the structural misattribution of
+Proposition~\ref{prop:split}, which survives at good conditioning and therefore
+cannot be removed by any posture choice. And where a six-joint arm executing a
+one-dimensional path has a redundant angle to spend on conditioning, a four-joint
+arm tracking a pose has none, so $\sigma_{\min}(\Jv)$ is used here as a gate that
+declines to report rather than as an objective to maximize. The bound is verified
+as a law on the simulated plant in Section~\ref{sec:res-cond}.
 
 \subsection{Workspace characterization}
 \label{sec:sweep}

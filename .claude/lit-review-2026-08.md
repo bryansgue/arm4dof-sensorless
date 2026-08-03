@@ -23,7 +23,7 @@ dónde llega el derecho a afirmar.
 |---|---|---|
 | `wong2024sensorobs` | **texto completo, pág. 1-12** | todo lo de abajo |
 | `magrini2014virtual` | extracto verificado (sesión anterior) | todo |
-| `lu2023configopt` | **solo resumen** (T&F 403, hrcak tras captcha) | solo lo que dice el resumen |
+| `lu2023configopt` | **texto completo, 32 pág.** (vía figshare, ver abajo) | todo lo de abajo |
 | `dewolde2024current` | **solo resumen** | solo lo que dice el resumen |
 | resto | resumen | contexto, no diferenciación |
 
@@ -112,26 +112,46 @@ porque si el borrador lo presenta como observación propia, se lee mal.
 
 ## 🟠 EL SEGUNDO VECINO — Lu, Shen & Zhuang, Automatika 2023
 
-`lu2023configopt`. **Solo resumen leído** (T&F devuelve 403; hrcak pide captcha).
-Lo que el resumen dice, textual:
+`lu2023configopt`. **Texto completo leído** (32 pág.). ⚠️ T&F da 403 y hrcak pide
+captcha; el manuscrito aceptado sale por **figshare**, que no bloquea:
 
-> *"applies configuration optimization based on Jacobian condition number (JCN) to
-> reduce the modelling error and its negative impact ... The JCN is used as an
-> evaluating indicator to optimize the robot configurations"*
+```bash
+curl -s https://api.figshare.com/v2/articles/21878553/files      # lista archivos
+curl -sL https://ndownloader.figshare.com/files/38814204 -o lu2023.pdf
+```
 
-Robot de 6 juntas, mejora de hasta 48.28%.
+(La ruta general: Unpaywall `api.unpaywall.org/v2/<DOI>?email=...` lista todos los
+espejos abiertos. Sirvió acá y sirve para el resto.)
 
-**Consecuencia:** que el condicionamiento del Jacobiano gobierne la exactitud de la
-estimación de fuerza, y que sirva de criterio para **elegir configuraciones**, está
-publicado. Coincide con lo ya acordado en `paper-domain.md` — el gating es
-*consecuencia útil*, no método nuevo — pero ahora hay una cita concreta que lo
-respalda y hay que ponerla.
+**Lo que hace, verificado en el texto — es MÁS solapado de lo que decía el
+resumen:**
 
-Lo que queda como propio: la **cota** `‖δf‖ ≤ ‖δτ‖/σ_min(Jv)` **verificada** como
-ley en la planta (pendiente −0.872, R² 0.980), en el régimen deficiente, y usada
-como reja que **se niega a reportar** en vez de como objetivo a optimizar.
+- su cota (Ec. 21) es la **relativa clásica** del número de condición:
+  `‖δF‖/‖F‖ ≤ cond(Jᵀ)·‖δτ‖/‖τ‖`, y la reconstrucción (Ec. 22) es
+  `F̂ = [J(q)ᵀ]⁻¹ τ̂` — o sea **`Jᵀ` cuadrado e invertible**, robot de 6 juntas;
+- **sí mapean el espacio de trabajo**: 500 000 configuraciones por Monte Carlo,
+  distribución del JCN y su función de densidad (Fig. 7). JCN medio 1052.9,
+  mínimo 9.17, el 96.55% por encima de 11;
+- lo usan **prescriptivamente**: optimizan dirección de la trayectoria y pose del
+  efector para bajar el JCN medio sobre el camino;
+- y ellos mismos declaran el hueco que llenan: *"the relationship between the JCN
+  and the force estimation error has not yet been investigated"* (2023).
 
-⛔ Conseguir el texto completo antes de escribir la frase de diferenciación.
+**El delta, ahora preciso y escrito en la Sec. IV del manuscrito:**
+
+1. su inverso **no existe** con `n<6` — `Jᵀ` es 6×4. La cota de acá es **absoluta**
+   y sobre el inverso **sobredeterminado** de contacto puntual, con `σ_min(Jv)`, no
+   un número de condición de `J` completo;
+2. ellos mapean el **índice**, acá se mapea el **error** — y el componente dominante
+   del error es la mal-atribución estructural, que **sobrevive con buen
+   condicionamiento** y por lo tanto ninguna elección de postura la quita. Su marco
+   entero supone error ∝ condicionamiento;
+3. un brazo de 6 juntas siguiendo un camino 1-D tiene ángulo redundante para gastar
+   en condicionamiento; uno de 4 siguiendo una pose no tiene ninguno ⇒ acá el índice
+   es **reja**, no objetivo.
+
+⚠️ **No repetir la afirmación negativa de ellos.** Con este paper citado, la ruta
+del condicionamiento está establecida; lo de acá es el régimen deficiente.
 
 ---
 
