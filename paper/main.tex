@@ -358,12 +358,20 @@ where it sets the threshold between synthetic and physical compliance.
 
 \subsection{Estimation and compliance on commercial actuators}
 A parallel line targets hardware without joint torque sensing, where the residual
-must be built from motor current. External wrenches have been reconstructed from
-internal signals alone for fine manipulation~\cite{shan2024fine} and with fast
+must be built from motor current. Cartesian contact forces and torques have been
+estimated from motor signals alone on seven-joint
+arms~\cite{wahrburg2018motorcurrent}, external wrenches have been reconstructed
+from internal signals for fine manipulation~\cite{shan2024fine} and with fast
 payload recalibration~\cite{shan2024payload}, and disturbance observers with
 learned friction models have been used on industrial
 arms~\cite{liu2021sensorless}; direct teaching driven by current-inferred torque
-has been demonstrated on a surgical assistant~\cite{zhang2021forcefree}. Closest
+has been demonstrated on a surgical assistant~\cite{zhang2021forcefree}. On
+low-cost hardware the point-contact reduction is already the practical default:
+Yen \emph{et al.} build a virtual force sensor from motor current on a sensorless
+arm and state plainly that the contact moment is disregarded and the force is
+referred to the end-effector~\cite{yen2019virtual}. What that literature does not
+supply, and what Section~\ref{sec:estimation} quantifies, is what the alternative
+costs when the arm cannot support it. Closest
 to the hardware considered here, de Wolde \emph{et al.} bring impedance control to
 a current-controlled arm without force or torque sensors, calibrating the actuator
 current-to-torque ratios and the joint friction from the robot model and

@@ -308,14 +308,17 @@ hace momento sobre eje vertical. Necesita tiro horizontal.
 2. **Aplicar la jerarquía acordada** (C1 principal, C2 co-principal, NMPC como
    demostrador) y comprimir según la lista de arriba.
 3. **S3, las dos partes**, en hardware.
-4. ⚠️ **Búsqueda bibliográfica — PARCIAL (03/08/2026).** `refs.bib` 14 → **31**,
-   todos los metadatos verificados contra Crossref/Semantic Scholar, cero
-   referencias sin citar. Aparecieron **tres vecinos que faltaban**, ya citados con
-   su delta: `wong2024sensorobs` (T-RO 2024, direcciones ciegas por configuración —
-   **leído entero**), `lu2023configopt` (gating por número de condición) y
-   `dewolde2024current` (corriente→par→compliance sin F/T). **Falta:** texto
-   completo de los dos últimos, y el barrido de citas hacia adelante. Registro en
-   `.claude/lit-review-2026-08.md`.
+4. ✅ **Búsqueda bibliográfica — HECHA (03/08/2026).** `refs.bib` 14 → **33**,
+   metadatos verificados contra Crossref/Semantic Scholar, cero referencias sin
+   citar, más el barrido de citas hacia adelante (130 revisadas). Aparecieron
+   **cinco trabajos que faltaban**, los cinco ya citados con su delta escrito:
+   `wong2024sensorobs` (T-RO 2024, direcciones ciegas por configuración),
+   `lu2023configopt` (condicionamiento como criterio de postura),
+   `dewolde2024current` (compliance sin F/T comandando corriente),
+   `wahrburg2018motorcurrent` (corriente → wrench cartesiano) y `yen2019virtual`
+   (contacto puntual como default en hardware barato). Los tres primeros **leídos
+   enteros**. ⚠️ De Wahrburg solo se leyó el título — se cita a ese nivel y nada
+   más. Registro completo en `.claude/lit-review-2026-08.md`.
 5. **Autoría: un solo autor.** Quitar afiliaciones 2 y 3, corresponding,
    financiamiento, agradecimiento y biografías. Se replicaron del otro paper de
    Access y **eso no se hereda**.

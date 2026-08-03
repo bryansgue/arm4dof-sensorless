@@ -4,13 +4,27 @@ Condición 1 del asesor: *"la revisión bibliográfica confirma que nadie reuni�
 esa caracterización"*. Este archivo registra qué se buscó, qué se encontró, qué se
 leyó de verdad, y qué afirmaciones del borrador quedan **tocadas**.
 
-⚠️ **Veredicto corto: la condición 1 NO está cumplida por el borrador actual.**
-Aparecieron **dos vecinos que hoy no se citan** y que un revisor del área encuentra
-en una búsqueda de diez minutos. Con ellos citados y las afirmaciones recalibradas,
-el encuadre acordado sobrevive — pero más angosto.
+**Veredicto corto (cerrado el 03/08/2026).** El borrador **no** cumplía la
+condición 1: había **cinco trabajos** que un revisor del área encuentra enseguida y
+que no se citaban. Los cinco están ahora citados con su delta escrito, y **tres de
+ellos leídos enteros**. El encuadre acordado sobrevive, más angosto.
 
-`refs.bib` pasó de 14 a **31** entradas. Todos los metadatos nuevos salen de
-Crossref y Semantic Scholar por DOI, no de memoria.
+`refs.bib` pasó de 14 a **33** entradas. Todos los metadatos nuevos salen de
+Crossref y Semantic Scholar por DOI, no de memoria. Cero referencias sin citar.
+
+⚠️ **Lo que la búsqueda quitó de la mesa** — no volver a reclamarlo:
+
+| ya publicado | por quién |
+|---|---|
+| direcciones ciegas dependientes de la configuración, medibles con un elipsoide | Wong & Suleiman, T-RO 2024 |
+| el condicionamiento del Jacobiano gobierna la exactitud, y sirve para elegir posturas | Lu et al. 2023 |
+| corriente de motor → fuerza/momento cartesianos sin sensor F/T | Wahrburg et al. 2018 |
+| la reducción a contacto puntual como default en hardware barato | Yen et al. 2019 |
+| velocidad mejor que posición como interfaz para compliance | Scherzinger et al. 2022 |
+
+**Lo que queda:** magnitud y prevalencia de la pérdida sobre el espacio de trabajo,
+la **mal-atribución** fuerza→momento que `P_ff` predice, el **fallo silencioso** de
+la correlación, y el cruce `n<6` + actuación en velocidad.
 
 ---
 
@@ -213,7 +227,46 @@ Buscado por diez ángulos distintos (ver "Consultas" abajo), sin resultado:
 
 ---
 
-## Referencias nuevas agregadas (17)
+## 🔁 Barrido de citas HACIA ADELANTE (03/08/2026) — hecho
+
+Quién citó a Magrini 2014 (**128**) y a Wong 2024 (**2**), vía
+`/graph/v1/paper/{id}/citations`. 130 únicas. ⚠️ **40 sin resumen**, así que el
+filtro por palabras clave da falsos negativos: los dos hallazgos salieron
+**mirando los 130 títulos a ojo**, no del filtro.
+
+**Dos que hay que citar, y salieron solo por acá:**
+
+- **`wahrburg2018motorcurrent`** (T-ASE 2018, **166 citas**) — corriente de motor →
+  fuerzas y momentos cartesianos, filtro de Kalman, ABB YuMi de 7 juntas por brazo.
+  Es el trabajo canónico de la cadena de C2 en el régimen bien puesto.
+  ⚠️ **TEXTO NO LEÍDO**: IEEE bloquea y no hay versión abierta (Unpaywall: `oa:
+  False`). Metadatos sí verificados en Crossref. **Se cita al nivel del título y
+  nada más.** Si alguna vez se quiere afirmar algo de su método, conseguirlo.
+- **`yen2019virtual`** (Sensors 2019, 37 citas, abierto). **Leído.** Brazo barato
+  sin sensores, observador de par externo desde corriente, calibración
+  corriente–par colgando una masa constante en estático, y discusión de stiction.
+  Textual: *"only the simple contact force F_c was considered, and the external
+  torque M_c was disregarded ... only forces that were applied on the end-effector
+  ... were considered"*.
+
+⚠️ **Yen 2019 confirma que la reducción a contacto puntual YA ES el default
+práctico en hardware barato.** No contradice al paper —que nunca la reclamó como
+nueva— pero conviene citarlo: hace más creíble el encuadre y le quita a un revisor
+la objeción de *"esto es lo que todo el mundo hace"*. Su procedimiento de
+calibración es además muy parecido al de S3 parte B.
+
+**Lo que el barrido NO encontró**, en 130 citas: nadie cuantifica la pérdida de la
+inversión 6-D sobre el espacio de trabajo, nadie reporta la mal-atribución
+fuerza→momento como magnitud, y nadie trata el cruce `n<6` + actuación en
+velocidad. Eso sostiene lo que queda del reclamo.
+
+⚠️ **No accesible, y queda anotado:** Flacco & Kröger, *Contact detection and
+physical interaction for low cost personal robots*, RO-MAN 2017. El espejo que
+lista Unpaywall es un registro equivocado. **No se cita porque no se leyó.**
+
+---
+
+## Referencias nuevas agregadas (19)
 
 | clave | rol |
 |---|---|
@@ -248,8 +301,10 @@ DOI/arXiv funciona. Descubrimiento por WebSearch, metadatos por DOI.
 
 1. ✅ **Texto completo de los tres vecinos** — hecho el 03/08/2026.
 2. ✅ **Posicionamiento reescrito** contra los tres, en Related Work y en Sec. IV.
-3. ⛔ Barrer las citas **hacia adelante** de `magrini2014virtual` y
-   `wong2024sensorobs` (quién los citó): es donde vive el trabajo que esta búsqueda
-   pudo no ver. **Es lo único que queda de la condición 1.**
-4. Bajar los fuentes LaTeX de los que estén en arXiv a `paper_refs/src_corpus/`
+3. ✅ **Barrido de citas hacia adelante** — hecho, 130 citas revisadas, dos
+   referencias nuevas. Ver la sección de arriba.
+4. ⛔ **Conseguir `wahrburg2018motorcurrent`** si alguna vez hace falta afirmar algo
+   de su método. Hoy se cita al nivel del título, que es lo único que se leyó.
+   Tampoco se pudo leer Flacco & Kröger 2017, y por eso no se cita.
+5. Bajar los fuentes LaTeX de los que estén en arXiv a `paper_refs/src_corpus/`
    para el pase léxico de `lint_prose.py --sweep` (pendiente ya registrado).
