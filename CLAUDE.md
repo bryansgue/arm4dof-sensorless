@@ -12,8 +12,8 @@ Estimación de fuerza de contacto **sin sensor** y control compliant para un bra
 
 | | |
 |---|---|
-| paper | `paper/main.tex`, 14 pág, IEEE Access, 0 errores, lint clean |
-| bloqueo | **autoría** (decisión del autor). ORCID en el portal, fotos en cámara lista |
+| paper | `paper/main.tex`, **15 pág**, IEEE Access, 0 errores, lint clean, **33 refs** |
+| bloqueo | **la afiliación** (decisión del autor). Autoría única ya aplicada. ORCID en el portal, fotos en cámara lista |
 | hardware | **nada probado en el brazo real.** `hw/` listo, procedimientos validados |
 | rama | `master` (mergeado desde `sensorless-contact-model`), sin pushear |
 
@@ -303,11 +303,13 @@ hace momento sobre eje vertical. Necesita tiro horizontal.
 
 ## Pendientes, en orden
 
-1. **Reescribir el posicionamiento contra Magrini** como extensión cuantitativa y
-   orientada a diseño. Es lo que bloquea el envío.
-2. **Aplicar la jerarquía acordada** (C1 principal, C2 co-principal, NMPC como
-   demostrador) y comprimir según la lista de arriba.
-3. **S3, las dos partes**, en hardware.
+⛔ **LO ÚNICO QUE BLOQUEA EL ENVÍO HOY: la afiliación.** Quedó LASER/UFPB, marcada
+con comentario en `main.tex:54`. Es decisión del autor.
+
+1. ✅ **Posicionamiento contra Magrini** reescrito (commit `68b104c`).
+2. ✅ **Jerarquía acordada aplicada** (C1 principal, C2 co-principal, NMPC
+   demostrador) y comprimido. 15 páginas.
+3. **S3, las dos partes**, en hardware. Requiere el brazo montado.
 4. ✅ **Búsqueda bibliográfica — HECHA (03/08/2026).** `refs.bib` 14 → **33**,
    metadatos verificados contra Crossref/Semantic Scholar, cero referencias sin
    citar, más el barrido de citas hacia adelante (130 revisadas). Aparecieron
@@ -319,15 +321,22 @@ hace momento sobre eje vertical. Necesita tiro horizontal.
    (contacto puntual como default en hardware barato). Los tres primeros **leídos
    enteros**. ⚠️ De Wahrburg solo se leyó el título — se cita a ese nivel y nada
    más. Registro completo en `.claude/lit-review-2026-08.md`.
-5. **Autoría: un solo autor.** Quitar afiliaciones 2 y 3, corresponding,
-   financiamiento, agradecimiento y biografías. Se replicaron del otro paper de
-   Access y **eso no se hereda**.
-6. Correcciones puntuales del asesor: abstract (*"of the real servo"* se lee como
-   dato real), *under-actuated* → *low-DoF*, y desambiguar 0.99 N vs 0.264 N.
+5. ✅ **Autoría única** aplicada, y correcciones puntuales del asesor (abstract,
+   *under-actuated* → *low-DoF*, 0.99 N vs 0.264 N desambiguado). ⛔ Falta
+   **confirmar la afiliación**.
+6. ✅ **Sec. VII repetida con V0 en vez de T** — es `sec:res-model`, Tabla IX: el
+   lazo compliant completo con controlador cinemático, estimador idéntico.
 7. Corpus de referencia en `paper_refs/src_corpus/` para el barrido léxico
    (`lint_prose.py --sweep`). Hoy solo cubre ortografía y AI-tells.
-8. Repetir la Sec. VII con V0 en vez de T. Declarado equivalente y demostrado en
-   el lazo compliant, pero un revisor puede pedirlo.
+8. Conseguir el texto de `wahrburg2018motorcurrent` si alguna vez hace falta
+   afirmar algo de su método. Hoy se cita al nivel del título.
 
-**Lo que sacaría si hay que acortar:** Sec. VII-F (compliant vs rígido, N=6) y la
-ablación de la métrica. No son contribuciones, respaldan. Ahí hay página y media.
+⚠️ **Ya no queda material fácil de cortar.** Se sacaron la ablación de la métrica,
+"compliant vs rígido" (N=6) y la nota de implementación en tiempo real. Lo que
+queda sostiene C1 o C2. Recortar más cuesta evidencia — es decisión del asesor, no
+mecánica.
+
+⚠️ **La razón de costo V0 vs T tiene DOS valores y los dos son correctos:** ~27×
+en el test de regulación (Tabla IV) y **25×** en el lazo compliant completo
+(Tabla IX). El del resumen y las conclusiones es el segundo. Son experimentos
+distintos; no "unificarlos".
