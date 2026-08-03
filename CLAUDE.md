@@ -228,11 +228,20 @@ Regenerar solvers: `python3 generate_arm_dqnmpc_ocp.py`, `generate_arm_vel_ocp.p
 **Lo que hace falta correr para el paper: S3, LAS DOS PARTES.**
 
 ```bash
-python3 hw/s3_conditioning.py --port /dev/ttyUSB0 --mass 0.2 --pull 2.0
+python3 hw/s3_conditioning.py --port /dev/ttyUSB0 --mass 0.2 --pull 2.0 \
+        --pull-tol 0.1 --repeats 3
 ```
 
 Par deshabilitado, sin lazo de control, bus a 10 Hz alcanza, cuatro posturas a
 mano. No hace falta sensor F/T: una masa (~0.2 kg) y una balanza de equipaje.
+
+**Lo que el script registra**, para que el ensayo sea auditable y no una anécdota:
+dirección y punto de aplicación (posición del efector por FK, que es el punto de
+contacto que el estimador supone conocido), incertidumbre del instrumento,
+**corriente en reposo** y su ruido por postura, y **repetibilidad** entre ensayos
+repetidos. Con eso calcula un **piso de resolución** = incertidumbre +
+repetibilidad, y se niega a declarar una separación entre estimadores menor que
+ese piso.
 
 | parte | qué valida | necesita |
 |---|---|---|
@@ -254,12 +263,21 @@ es tiro horizontal con balanza de equipaje: `--pull 2.0 --pull-axis x`.
 Pendiente ~0 en A significa que la Sec. IV está mal. Empate entre estimadores en B
 significa que la contribución principal no se sostiene en hardware.
 
-⚠️ **El veredicto de B está gateado por `dJ/J`.** Si el brazo se hunde al aplicar
-la carga (>3% en cualquier postura) el script imprime **SIN VEREDICTO** en vez de
-un resultado: el Jacobiano cambió entre las dos medidas y el número mezcla el
-efecto con el hundimiento. En el ensayo en seco contra MuJoCo da 8/8 contaminadas
-—el banco tiene lazo de velocidad blando—; el modo posición del MX-28 es mucho más
-rígido. Sostener rígido o bajar la carga.
+⚠️ **El veredicto de B está gateado por tres cosas, y calla si alguna falla:**
+
+| reja | por qué | umbral |
+|---|---|---|
+| `dJ/J` | el brazo se hunde ⇒ el Jacobiano cambió entre las dos medidas y el número mezcla el efecto con el hundimiento | 3% |
+| `qd_max` | si el brazo se mueve, `τ` lleva inercia y no compara contra la lectura del instrumento | 0.02 rad/s |
+| deriva | la carga no se sostuvo constante, o la stiction se reacomodó | 10% de `‖δτ‖` |
+
+Por eso la carga se aplica **cuasi-estáticamente**. En el ensayo en seco contra
+MuJoCo da 8/8 contaminadas por `dJ/J` —el banco tiene lazo de velocidad blando—;
+el modo posición del MX-28 es mucho más rígido. Sostener rígido o bajar la carga.
+
+⚠️ **En simulación la repetibilidad y el ruido de reposo salen 0.000 por
+construcción** (MuJoCo es determinista). Esos dos números solo significan algo en
+hardware; el script lo avisa al arrancar en modo `--sim`.
 
 ⚠️ **La tabla de control de `hw/dxl_io.py` NO está verificada** contra el servo
 real. S0 la sondea sin habilitar par. Correr S0 antes de mover un motor.

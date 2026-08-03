@@ -101,9 +101,10 @@ sys.path.insert(0, HERE)
 sys.path.insert(0, os.path.join(HERE, "..", "ocp_generation"))
 
 import dxl_io
-from arm_kinematics import build_jac_fn
+from arm_kinematics import build_jac_fn, build_fk_fn
 
 fJ = build_jac_fn()
+fk = build_fk_fn()
 J_ = lambda q: np.array(fJ(q))            # 6x4
 Jv_ = lambda q: np.array(fJ(q))[:3, :]    # 3x4
 G = 9.81
@@ -136,6 +137,12 @@ POSES = [
 
 NSAMP = 200
 SETTLE = 3.0
+
+# Rejas de cuasi-estatica. La forma diferencial supone que las dos medidas son
+# EQUILIBRIOS: si el brazo todavia se mueve, tau incluye inercia y la lectura de
+# la balanza no corresponde al par medido.
+QD_MAX = 0.02          # rad/s, velocidad maxima admitida durante la ventana
+DRIFT_FRAC = 0.10      # deriva admitida entre 1a y 2a mitad, como fraccion de |dtau|
 
 
 def measure(arm, n=NSAMP):
@@ -224,93 +231,187 @@ def part_A(arm):
 AXES = {"x": np.array([1.0, 0.0, 0.0]), "y": np.array([0.0, 1.0, 0.0])}
 
 
-def _load_case(arm, q_ref, f_true, apply_sim):
-    """Diferencial CON-SIN sobre una postura. Devuelve (qm, dtau, dq, dJ/J)."""
+def _sample(arm):
+    """Ventana de NSAMP lecturas con diagnostico de CUASI-ESTATICA.
+
+    Devuelve tambien qd_max (el brazo tiene que estar quieto: si se mueve, tau
+    lleva inercia y la lectura de la balanza no corresponde al par medido) y la
+    deriva entre la primera y la segunda mitad de la ventana (stiction que se
+    reacomoda, o el operador que no sostiene constante el tiro)."""
+    Q = []; QD = []; T = []
+    for _ in range(NSAMP):
+        q, qd, tau = arm.read()
+        Q.append(q); QD.append(qd); T.append(tau)
+        if not SIM: time.sleep(0.01)
+    Q = np.array(Q); QD = np.array(QD); T = np.array(T)
+    half = len(T)//2
+    return dict(q=Q.mean(0), tau=T.mean(0), tau_std=T.std(0),
+                qd_max=float(np.max(np.abs(QD))),
+                drift=float(np.max(np.abs(T[half:].mean(0) - T[:half].mean(0)))))
+
+
+def _load_case(arm, q_ref, apply_sim):
+    """Diferencial CON-SIN sobre una postura, con diagnostico completo."""
     M = {}
     for lab in ("SIN", "CON"):
-        ask(f"  Carga {lab} aplicada. Enter cuando este quieto... ")
+        if lab == "CON":
+            ask("  Aplicar la carga LENTAMENTE (cuasi-estatica) y sostenerla. "
+                "Enter cuando este quieto... ")
+        else:
+            ask("  Sin carga. Enter cuando este quieto... ")
         if SIM:
             apply_sim(lab == "CON"); _place(arm, q_ref)
         time.sleep(SETTLE)                    # re-asentar: cambia la stiction
-        Q = []; T = []
-        for _ in range(NSAMP):
-            q, qd, tau = arm.read(); Q.append(q); T.append(tau)
-            if not SIM: time.sleep(0.01)
-        M[lab] = (np.mean(Q, 0), np.mean(T, 0))
-    dq = float(np.linalg.norm(M["CON"][0] - M["SIN"][0]))
-    qm = 0.5*(M["SIN"][0] + M["CON"][0])
-    dJ = float(np.linalg.norm(Jv_(M["CON"][0]) - Jv_(M["SIN"][0]))
-               / np.linalg.norm(Jv_(qm)))
-    return qm, M["CON"][1] - M["SIN"][1], dq, dJ
+        M[lab] = _sample(arm)
+    dtau = M["CON"]["tau"] - M["SIN"]["tau"]
+    qm = 0.5*(M["SIN"]["q"] + M["CON"]["q"])
+    return dict(
+        qm=qm, dtau=dtau,
+        dq=float(np.linalg.norm(M["CON"]["q"] - M["SIN"]["q"])),
+        dJ=float(np.linalg.norm(Jv_(M["CON"]["q"]) - Jv_(M["SIN"]["q"]))
+                 / np.linalg.norm(Jv_(qm))),
+        # reposo: es el cero del sensor de corriente en esa postura, y su ruido
+        tau_rest=M["SIN"]["tau"], tau_rest_std=M["SIN"]["tau_std"],
+        qd_max=max(M["SIN"]["qd_max"], M["CON"]["qd_max"]),
+        drift=max(M["SIN"]["drift"], M["CON"]["drift"]),
+        drift_frac=max(M["SIN"]["drift"], M["CON"]["drift"])
+        / max(float(np.linalg.norm(dtau)), 1e-9))
 
 
-def part_B(arm, mass=None, pull=None, pull_axis="x"):
+def part_B(arm, mass=None, pull=None, pull_axis="x", tol=0.0, repeats=3):
     """Exactitud y mal-atribucion contra carga conocida, en DOS direcciones.
 
     Mide SESGO, no dispersion, y corre los DOS estimadores sobre el MISMO
     residuo. Es la unica parte que puede refutar la Seccion IV en hardware.
+
+    Registra ademas todo lo que hace falta para que el ensayo sea auditable:
+    direccion y punto de aplicacion, incertidumbre del instrumento, corriente en
+    reposo, repetibilidad entre ensayos, y las rejas de cuasi-estatica.
     """
     cases = []
     if mass:
-        cases.append(("colgada", np.array([0.0, 0.0, -mass*G]),
+        # la masa se pesa una vez y no varia: la incertidumbre es despreciable
+        # frente a la de un tiro sostenido a mano
+        cases.append(("colgada", np.array([0.0, 0.0, -mass*G]), mass*G*0.02,
                       lambda on, m=mass: arm.hang(m if on else 0.0)))
     if pull:
         u = AXES[pull_axis]
-        cases.append((f"tiro {pull_axis}", pull*u,
+        # tol: incertidumbre declarada de la balanza [N]. Si no se da, 5 % del
+        # valor, que es lo tipico de una balanza de equipaje barata.
+        cases.append((f"tiro {pull_axis}", pull*u, tol if tol > 0 else 0.05*pull,
                       lambda on, v=pull*u: arm.push(v if on else np.zeros(3))))
     if not cases:
         return None
 
     print("\n" + "=" * 74)
     print("PARTE B — exactitud y mal-atribucion, con carga conocida")
+    print(f"{repeats} ensayos por postura y carga (repetibilidad)")
     print("⚠️ Sostener el brazo RIGIDO. Si se hunde al aplicar la carga, el")
     print("   Jacobiano cambia y el sesgo tapa el efecto que se quiere medir.")
+    print("⚠️ Aplicar la carga CUASI-ESTATICAMENTE: si el brazo se mueve, tau")
+    print("   lleva inercia y la lectura del instrumento no corresponde al par.")
     print("=" * 74)
 
     out = []
-    for name, f_true, apply_sim in cases:
-        print(f"\n--- CARGA '{name}'   f_true = {np.round(f_true,3)}   "
-              f"|f| = {np.linalg.norm(f_true):.3f} N ---")
+    for name, f_true, u_f, apply_sim in cases:
+        print(f"\n--- CARGA '{name}'   f_true = {np.round(f_true,3)} N   "
+              f"|f| = {np.linalg.norm(f_true):.3f} ± {u_f:.3f} N ---")
         if "tiro" in name:
-            print("   Tirar del efector con la balanza de equipaje a lo largo del")
-            print(f"   eje {pull_axis} del mundo, y sostener la lectura estable.")
+            print(f"   Tirar del efector con la balanza a lo largo del eje "
+                  f"{pull_axis} del mundo.")
+            print("   El tiro se aplica EN EL EFECTOR: es el punto de contacto que")
+            print("   el estimador supone conocido. Aplicarlo en otro lado invalida")
+            print("   el modelo, no el estimador.")
         for p, (q_ref, _) in enumerate(POSES):
             print(f"\nPOSTURA {p+1}/{len(POSES)}   q = {np.round(q_ref,3)}")
             ask("  Llevar el brazo a esa postura y fijarlo. Enter... ")
             _place(arm, q_ref)
-            qm, dtau, dq, dJ = _load_case(arm, q_ref, f_true, apply_sim)
-            # el residuo de la carga es -dtau: el par del servo la COMPENSA
-            f3 = est_3d(qm, -dtau)
-            f6, m6 = est_6d(qm, -dtau)
-            e3 = float(np.linalg.norm(f3 - f_true))
-            e6 = float(np.linalg.norm(f6 - f_true))
-            sig = float(np.linalg.svd(Jv_(qm), compute_uv=False)[2])
-            out.append((name, sig, e3, e6, float(np.linalg.norm(m6)), dq, dJ))
-            print(f"  sigma_min {sig:.4f}")
-            print(f"  3-D contacto puntual  |f| {np.linalg.norm(f3):6.3f} N   "
-                  f"error {e3:6.3f} N")
-            print(f"  6-D min-norm          |f| {np.linalg.norm(f6):6.3f} N   "
-                  f"error {e6:6.3f} N   |momento espurio| {np.linalg.norm(m6):6.3f} N.m")
-            print(f"  hundimiento |dq| {dq:.4f} rad   dJ/J {100*dJ:.1f} %")
-            if dJ > 0.03:
+            trials = []
+            for r in range(repeats):
+                print(f"  ensayo {r+1}/{repeats}")
+                d = _load_case(arm, q_ref, apply_sim)
+                # el residuo de la carga es -dtau: el par del servo la COMPENSA
+                f3 = est_3d(d["qm"], -d["dtau"])
+                f6, m6 = est_6d(d["qm"], -d["dtau"])
+                d.update(f3=f3, f6=f6,
+                         e3=float(np.linalg.norm(f3 - f_true)),
+                         e6=float(np.linalg.norm(f6 - f_true)),
+                         m6=float(np.linalg.norm(m6)),
+                         p_contact=np.array(fk(d["qm"])[1]).flatten(),
+                         sig=float(np.linalg.svd(Jv_(d["qm"]),
+                                                 compute_uv=False)[2]))
+                trials.append(d)
+                print(f"    3-D |f| {np.linalg.norm(f3):6.3f} N  error {d['e3']:6.3f} N"
+                      f"   |   6-D |f| {np.linalg.norm(f6):6.3f} N  "
+                      f"error {d['e6']:6.3f} N  |M| {d['m6']:6.3f} N.m")
+
+            F3 = np.array([t["f3"] for t in trials])
+            rep = float(np.max(np.linalg.norm(F3 - F3.mean(0), axis=1)))
+            agg = dict(
+                carga=name, sigma=trials[0]["sig"], u_f=u_f,
+                p_contact=trials[0]["p_contact"],
+                dir_f=f_true/max(np.linalg.norm(f_true), 1e-9),
+                e3=float(np.mean([t["e3"] for t in trials])),
+                e6=float(np.mean([t["e6"] for t in trials])),
+                m6=float(np.mean([t["m6"] for t in trials])),
+                repet=rep,
+                dq=float(np.max([t["dq"] for t in trials])),
+                dJ=float(np.max([t["dJ"] for t in trials])),
+                qd_max=float(np.max([t["qd_max"] for t in trials])),
+                drift_frac=float(np.max([t["drift_frac"] for t in trials])),
+                tau_rest=trials[0]["tau_rest"],
+                tau_rest_std=trials[0]["tau_rest_std"])
+            out.append(agg)
+            print(f"  sigma_min {agg['sigma']:.4f}   punto de contacto "
+                  f"{np.round(agg['p_contact'],3)} m")
+            print(f"  3-D error medio {agg['e3']:6.3f} N      "
+                  f"6-D error medio {agg['e6']:6.3f} N   "
+                  f"|momento espurio| {agg['m6']:6.3f} N.m")
+            print(f"  repetibilidad (dispersion de f_3D entre ensayos) "
+                  f"{agg['repet']:.3f} N")
+            print(f"  reposo |tau| {np.linalg.norm(agg['tau_rest']):.4f} N.m   "
+                  f"ruido medio {np.mean(agg['tau_rest_std']):.5f} N.m")
+            print(f"  hundimiento |dq| {agg['dq']:.4f} rad   dJ/J {100*agg['dJ']:.1f} %"
+                  f"   qd_max {agg['qd_max']:.4f} rad/s   "
+                  f"deriva {100*agg['drift_frac']:.1f} % de |dtau|")
+            if agg["dJ"] > 0.03:
                 print("  ⚠️ dJ/J > 3 %: el brazo se hundio y la forma diferencial")
                 print("     queda contaminada. Sostener mas rigido o bajar la carga.")
+            if agg["qd_max"] > QD_MAX:
+                print(f"  ⚠️ qd_max > {QD_MAX} rad/s: NO fue cuasi-estatico. tau lleva")
+                print("     inercia y no compara contra la lectura del instrumento.")
+            if agg["drift_frac"] > DRIFT_FRAC:
+                print(f"  ⚠️ deriva > {100*DRIFT_FRAC:.0f} % de |dtau|: la carga no se")
+                print("     sostuvo constante, o la stiction se reacomodo.")
 
     print("\n" + "-"*74)
-    E3 = np.array([r[2] for r in out]); E6 = np.array([r[3] for r in out])
-    Msp = np.array([r[4] for r in out])
-    DJ = np.array([r[6] for r in out])
-    bad = int(np.sum(DJ > 0.03))
+    E3 = np.array([r["e3"] for r in out]); E6 = np.array([r["e6"] for r in out])
+    Msp = np.array([r["m6"] for r in out]); U = np.array([r["u_f"] for r in out])
+    REP = np.array([r["repet"] for r in out])
+    bad_J = int(np.sum([r["dJ"] > 0.03 for r in out]))
+    bad_qs = int(np.sum([r["qd_max"] > QD_MAX or r["drift_frac"] > DRIFT_FRAC
+                         for r in out]))
     print(f"  error medio   3-D {E3.mean():.3f} N     6-D {E6.mean():.3f} N")
     print(f"  momento espurio del 6-D:  medio {Msp.mean():.3f} N.m   "
           f"max {Msp.max():.3f} N.m   (deberia ser 0)")
-    print(f"  posturas con dJ/J > 3 %: {bad}/{len(out)}")
-    if bad:
-        print(f"\n  SIN VEREDICTO — {bad} de {len(out)} posturas quedaron")
-        print("  contaminadas por el hundimiento. El brazo no se sostuvo rigido:")
-        print("  los numeros de arriba mezclan el efecto que se quiere medir con")
-        print("  un cambio de Jacobiano. Sostener mas rigido (modo posicion) o")
-        print("  bajar la carga, y repetir. NO reportar esto en el paper.")
+    print(f"  incertidumbre del instrumento: {U.mean():.3f} N   "
+          f"repetibilidad media {REP.mean():.3f} N")
+    print(f"  celdas con dJ/J > 3 %: {bad_J}/{len(out)}   "
+          f"no cuasi-estaticas: {bad_qs}/{len(out)}")
+    # el piso de resolucion del ensayo: no se puede afirmar una diferencia
+    # menor que la incertidumbre del instrumento mas la dispersion entre ensayos
+    piso = float(U.mean() + REP.mean())
+    print(f"  piso de resolucion (instrumento + repetibilidad): {piso:.3f} N")
+    if bad_J or bad_qs:
+        print(f"\n  SIN VEREDICTO — {bad_J} celdas contaminadas por hundimiento y")
+        print(f"  {bad_qs} por no ser cuasi-estaticas. Los numeros de arriba mezclan")
+        print("  el efecto que se quiere medir con un cambio de Jacobiano o con")
+        print("  inercia. Sostener mas rigido (modo posicion), aplicar la carga mas")
+        print("  despacio, y repetir. NO reportar esto en el paper.")
+    elif E6.mean() - E3.mean() < piso:
+        print(f"\n  NO CONCLUYE — la separacion entre estimadores "
+              f"({E6.mean()-E3.mean():.3f} N) no supera el piso del ensayo")
+        print(f"  ({piso:.3f} N). Hace falta una carga mayor o un instrumento mejor.")
     elif E6.mean() > 1.5*E3.mean() and Msp.mean() > 0.05:
         print("\n  PARTE B PASA — el 6-D pierde fuerza y genera momento espurio")
         print("  sobre hardware. La Seccion IV queda verificada fisicamente.")
@@ -334,6 +435,11 @@ def main():
                          "(segunda direccion de la parte B)")
     ap.add_argument("--pull-axis", default="x", choices=["x", "y"],
                     help="eje de mundo del tiro horizontal")
+    ap.add_argument("--pull-tol", type=float, default=0.0,
+                    help="incertidumbre declarada de la balanza [N]. Por defecto "
+                         "5 %% del tiro, tipico de una balanza de equipaje")
+    ap.add_argument("--repeats", type=int, default=3,
+                    help="ensayos por postura y carga, para medir repetibilidad")
     ap.add_argument("--sim", action="store_true",
                     help="ENSAYO EN SECO contra MuJoCo: sin hardware y sin prompts. "
                          "Verifica el flujo del script, NO produce resultados "
@@ -352,7 +458,10 @@ def main():
     if SIM:
         import mj_arm
         print("\n⚠️ ENSAYO EN SECO contra MuJoCo. No es hardware y no produce")
-        print("   resultados publicables: solo verifica que el script corre.\n")
+        print("   resultados publicables: solo verifica que el script corre.")
+        print("   El banco es DETERMINISTA, asi que la repetibilidad y el ruido")
+        print("   de reposo salen 0.000 por construccion. Esos dos numeros solo")
+        print("   significan algo en hardware.\n")
         arm = mj_arm.MjArm(); arm.set_velocity_mode()
     else:
         arm = dxl_io.DxlArm(port=args.port, baud=args.baud, ids=args.ids)
@@ -365,7 +474,8 @@ def main():
     try:
         arm.enable(False)
         S, D, slope, r2 = part_A(arm)
-        B = part_B(arm, args.mass, args.pull, args.pull_axis)
+        B = part_B(arm, args.mass, args.pull, args.pull_axis,
+                   args.pull_tol, args.repeats)
     finally:
         arm.close()
 
@@ -374,7 +484,8 @@ def main():
              partB=np.array(B, dtype=object) if B else np.array([]),
              mass=args.mass if args.mass else 0.0,
              pull=args.pull if args.pull else 0.0,
-             pull_axis=args.pull_axis)
+             pull_axis=args.pull_axis, pull_tol=args.pull_tol,
+             repeats=args.repeats)
     print("\nguardado -> s3_result.npz")
 
 
