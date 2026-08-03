@@ -23,6 +23,29 @@ defensa es que está declarado.
 
 ---
 
+## ⛔ REVISIÓN DEL ASESOR (02/08/2026) — leer antes de tocar el paper
+
+El asesor revisó y **tiene razón en todo lo verificable**. No enviar hasta
+resolverlo. Detalle y citas en `.claude/paper-domain.md`.
+
+| hallazgo | verificado |
+|---|---|
+| **La diferenciación con Magrini es indefendible.** Ya establece el hecho dimensional (`rank J_c = 6` exige `n ≥ 6`), reduce a `m = 3`, dice que `N(J_c^T)` nunca se recupera, y su Fig. 7 muestra `4 < 6` con fuerza mal y momento espurio en hardware | ✅ contra la fuente |
+| El abstract dice *"under the quantization and stiction of the real servo"* y esos efectos están **simulados**. Se lee como datos reales | ✅ |
+| **"under-actuated" es incorrecto**: 4 juntas actuadas = totalmente actuado. Usar *low-DoF* o *task-dimension-deficient* | ✅ |
+| Inconsistencia 0.99 N (intro) vs 0.264 N (teoría): son experimentos distintos y el lector no puede saberlo | ✅ |
+| Autoría: debe salir con **un solo autor**. Quitar afiliaciones 2 y 3, corresponding, financiamiento, agradecimiento y biografías heredadas | criterio IEEE |
+| Esperar el hardware: las afirmaciones aplicadas dependen justo de lo que MuJoCo no valida (corriente como proxy de par, stiction, holgura, calibración de kt) | razonable |
+| 14 páginas con tres historias diluyen el aporte principal | razonable |
+
+⚠️ **Causa raíz del error grande: se citó a Magrini SIN LEERLO.** El extracto está
+en `.claude/magrini2014_extract.txt`. No volver a afirmar qué hace un paper sin
+abrirlo.
+
+**Lo que sigue en pie como aporte** está listado en `.claude/paper-domain.md`:
+cuantificación global, estructura direccional, fallo silencioso de la correlación,
+gating por condicionamiento, y todo el régimen de actuación en velocidad.
+
 ## Las tres contribuciones, y su experimento
 
 1. **Para `n<6` decide el modelo de contacto, no el rango del Jacobiano.**

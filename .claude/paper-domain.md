@@ -13,10 +13,40 @@ Corpus: **no hay corpus local todavía.** Ver "Pendiente" abajo.
   [must-cite]
 - **De Luca et al., IROS 2006** — detección de colisión y reacción segura, DLR-III
   (7 DoF) — mismo régimen: par, n≥6 — [must-cite]
-- **Magrini et al., IROS 2014** — sensor de fuerza virtual; estima fuerza Y punto
-  de contacto en brazos redundantes — **el competidor más cercano**: ya usa modelo
-  de contacto puntual, pero con n≥6 donde la inversión 6-D no es singular, y con
-  actuación en par — [must-cite, diferenciar explícitamente]
+- **Magrini et al., IROS 2014** — ⛔ **LEER EL PAPER ANTES DE ESCRIBIR NADA SOBRE
+  ÉL.** Texto extraído en `.claude/magrini2014_extract.txt`.
+
+  ⚠️ **02/08/2026: se verificó contra la fuente y la diferenciación que tenía el
+  paper era INDEFENDIBLE.** Magrini ya establece, en 2014, casi toda la
+  observación dimensional que yo reclamaba como nueva. Citas literales:
+
+  > *"in order to estimate properly Γc, i.e., both a contact force F_c ... and a
+  > contact torque M_c ..., we should have rank J_c = 6, which is true only if the
+  > robot has n ≥ 6 joints"*
+
+  > *"The dimension of the task related to the contact force is thus m = 3"*
+
+  > *"all forces F_c ∈ N(J_c^T) will never be recovered"*
+
+  > *"(J_c^T)# J_c^T ≠ I, so that part of the contact forces may not be identified"*
+
+  Y el experimento de la Fig. 7, con masa colgada en un KUKA LWR real:
+
+  > *"When attempting to estimate Γc ∈ R6 with the complete Jacobian, the number of
+  > informative residual components is too low (4 < 6), and this results in a wrong
+  > estimation of both F_c and M_c (the latter should be zero while it is not)"*
+
+  O sea: `4 < 6`, fuerza mal, momento espurio. Exactamente el "hallazgo" que el
+  borrador reclamaba. El caso `4 < 6` les aparece por contacto en un eslabón
+  intermedio, no por tener pocas juntas, pero **la matemática y la consecuencia son
+  las mismas**.
+
+  ⛔ **Frases del borrador que hay que borrar:** *"the consequences for the
+  inversion step are, to our knowledge, not characterized"* y *"there the
+  six-dimensional inversion is already well posed"*. Las dos son falsas.
+
+  **CAUSA RAÍZ: se citó el paper SIN LEERLO**, afirmando qué hacía desde memoria.
+  No repetir. — [must-cite, reposicionar como extensión, no como descubrimiento]
 - **Haddadin et al., T-RO 2017** — survey de detección/aislamiento/identificación —
   contexto, delimita el estado del arte — [must-cite]
 - **Yoshikawa, IJRR 1985** — elipsoides de manipulabilidad — problema DUAL
@@ -49,6 +79,21 @@ adorno2021dqrobotics.
 - **Lo que NO se reclama, y está escrito en el paper:** que `JᵀF=τ` esté
   indeterminado con n<6 es álgebra elemental; el modelo de contacto puntual es
   práctica estándar. Mantener ese párrafo — es lo que evita que se lea inflado.
+
+## Lo que SÍ queda como aporte propio (tras verificar Magrini)
+
+Magrini establece el hecho dimensional y muestra UN caso. No hace:
+
+- cuantificación global sobre el espacio de trabajo (2197 configs, 50.5% medio)
+- descomposición espectral de `P_ff` y estructura direccional (12000 direcciones,
+  correlación 0.9993 con la alineación)
+- demostración del **fallo silencioso**: correlación 0.997 conviviendo con 2.227 N
+- análisis de condicionamiento y criterio de gating por `σ_min(Jv)`
+- el régimen de **actuación en velocidad**: asignación de modelo (estimador sí,
+  controlador no) y los dos regímenes de compliance
+
+⇒ Reformular como **extensión cuantitativa y orientada a diseño**, no como
+descubrimiento del problema dimensional.
 
 ## Riesgos de revisor identificados
 
