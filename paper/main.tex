@@ -288,9 +288,16 @@ Luca and Mattone introduced the sensorless residual for hybrid force/motion
 control~\cite{deluca2005sensorless}, and the method was extended to safe reaction
 on lightweight arms~\cite{deluca2006collision}. Magrini \emph{et al.} developed
 the virtual force sensor, which for redundant arms estimates the contact location
-along the structure in addition to the force~\cite{magrini2014virtual}. A
-comprehensive account of detection, isolation, and identification appears
-in~\cite{haddadin2017survey}.
+along the structure in addition to the force~\cite{magrini2014virtual}, and the
+estimate has since been closed into hybrid force/velocity
+control~\cite{magrini2016hybrid} and into collaborative
+polishing~\cite{gaz2018polishing}. A comprehensive account of detection,
+isolation, and identification appears in~\cite{haddadin2017survey}, and the
+operational-space formulation~\cite{khatib1987operational} supplies the mapping
+between joint and task quantities that all of these share. Learned corrections have
+also been applied to the same inversion, improving wrench estimates on serial arms
+in static tasks and behaving better near singular
+configurations~\cite{osburg2022dnnwrench}.
 
 The closest prior work is~\cite{magrini2014virtual}, and the relationship must be
 stated precisely, because the dimensional argument that motivates this paper is
@@ -324,13 +331,49 @@ of Section~\ref{sec:velocity}.
 Manipulability ellipsoids~\cite{yoshikawa1985manipulability} and force
 polytopes~\cite{chiacchio1997polytope} describe the set of velocities or forces a
 manipulator can \emph{produce}, and are standard tools for posture optimization.
-The question posed here is the dual one, namely which external contacts a
-manipulator can \emph{perceive} through its own actuators. We show that for $n<6$
-the answer is governed not by the rank deficit of the full Jacobian, as a direct
-transposition of the classical analysis would suggest, but by the contact model
-the estimator assumes. The force polytope reappears in
-Section~\ref{sec:velocity-regimes} in its classical role, where it sets the
-threshold between synthetic and physical compliance.
+The dual question, which external contacts a manipulator can \emph{perceive}
+through its own sensing, has been formalized by Wong and Suleiman as sensor
+observability analysis~\cite{wong2024sensorobs}. They map the axes of distributed
+directional sensors into the task frame, obtain a per-configuration index and
+ellipsoid of sensing quality, and show on a seven-joint arm that certain postures
+leave interaction forces along a Cartesian axis unobserved while a ground-truth
+force sensor registers them. They also note the connection to
+$\mathcal{N}(\bm J^{\!\top})$, and use the index prescriptively, maximizing it in
+the null space or by quadratic programming to avoid blind configurations.
+
+That work and the present one answer different questions about the same geometry,
+and the distinction is worth stating. Their index is a normalized measure of
+alignment between sensor axes and task axes; it reports whether a direction is
+observed, not how many newtons of an applied force are lost, nor where the lost
+part is deposited. The mechanism studied here is the second one: under the
+six-dimensional inversion the unobserved component does not vanish, it reappears
+as a spurious moment, which is what makes the estimate wrong rather than merely
+incomplete. Their deficiency arises from sensor placement on arms that are not
+task-dimension deficient, whereas here it is structural in $n<6$; and their
+analysis is local and prescriptive, whereas
+Section~\ref{sec:estimation} is concerned with the magnitude and prevalence of the
+loss across a workspace and with the contact model that removes it. The force
+polytope reappears in Section~\ref{sec:velocity-regimes} in its classical role,
+where it sets the threshold between synthetic and physical compliance.
+
+\subsection{Estimation and compliance on commercial actuators}
+A parallel line targets hardware without joint torque sensing, where the residual
+must be built from motor current. External wrenches have been reconstructed from
+internal signals alone for fine manipulation~\cite{shan2024fine} and with fast
+payload recalibration~\cite{shan2024payload}, and disturbance observers with
+learned friction models have been used on industrial
+arms~\cite{liu2021sensorless}; direct teaching driven by current-inferred torque
+has been demonstrated on a surgical assistant~\cite{zhang2021forcefree}. Closest
+to the actuation regime considered here, de Wolde \emph{et al.} adapt impedance
+control to current-controlled arms without force or torque sensors, calibrating
+the actuator current-to-torque ratios and friction~\cite{dewolde2024current}. That
+work commands current, so the actuator remains a torque interface; the arm
+considered here exposes a velocity command and closes its own inner loop, which is
+what makes the model assignment of Section~\ref{sec:velocity} necessary. On the
+control side, admittance is the standard route to compliance on
+position-controlled hardware~\cite{keemink2018admittance,zhu2025compliantsurvey},
+and a velocity interface has been reported to yield smoother compliant behavior
+than a position interface on an industrial arm~\cite{scherzinger2022fdcc}.
 
 \subsection{Predictive control with a coupled pose error}
 Tracking a pose in $\SEthree$ requires a scalar error that penalizes translation
@@ -624,9 +667,13 @@ The point-contact model requires the contact location to be known. This holds fo
 hand guiding at the end-effector and fails for contact along the links. If the
 contact additionally transmits a moment, for instance through a rigidly grasped
 object, the ambiguity of Proposition~\ref{prop:split} returns and
-\eqref{eq:sixinv} becomes the honest choice, with the accompanying loss. Extending
-the estimator to an unknown contact point, in the spirit
-of~\cite{magrini2014virtual}, is future work.
+\eqref{eq:sixinv} becomes the honest choice, with the accompanying loss. Relaxing
+the assumption is an established line in its own right: the contact location can be
+recovered together with the force by constrained
+optimization~\cite{likar2014contact} or by particle filtering over the
+robot surface~\cite{manuelli2016cpf}, and it is what the virtual force sensor
+provides on redundant arms~\cite{magrini2014virtual}. Extending the estimator in
+that direction is future work.
 \label{rem:cost}
 \end{remark}
 
@@ -641,6 +688,19 @@ estimate by
 \end{equation}
 so $\sigma_{\min}(\Jv)$ bounds the amplification of residual error into force
 error and replaces observability as the quantity to map.
+
+That Jacobian conditioning governs the accuracy of residual-based force estimation
+is known, and has been exploited prescriptively: Lu \emph{et al.} optimize the
+configurations of a six-joint industrial robot using the Jacobian condition number
+as the indicator, reducing the effect of modeling error without reducing the error
+itself~\cite{lu2023configopt}. Two things differ here. The bound
+\eqref{eq:noise} is stated on the point-contact inverse rather than on the
+six-dimensional one, so it applies in the regime where the six-dimensional
+inverse is not merely ill-conditioned but indeterminate; and
+$\sigma_{\min}(\Jv)$ is used as a gate that declines to report, rather than as an
+objective to maximize, because on a four-joint arm the posture is often dictated
+by the task and not available as a free variable. The bound is verified as a law on
+the simulated plant in Section~\ref{sec:res-cond}.
 
 \subsection{Workspace characterization}
 \label{sec:sweep}
@@ -1225,9 +1285,12 @@ be read as a lower bound.
 
 \begin{remark}[Correlation is not accuracy]
 In the same experiment the six-dimensional estimate correlates with ground truth
-at $0.997$ while carrying the $2.227$~N error. Correlation measures shape and is
-insensitive to gain, so an agreement metric of this kind can appear healthy while
-the quantity of interest is substantially wrong.
+at $0.997$ while carrying the $2.227$~N error. That correlation measures
+association rather than agreement, and is insensitive to gain and offset, is a
+long-standing point in measurement comparison~\cite{bland1986agreement}; what the
+experiment adds is that the failure mode is reached here by the estimator's own
+structure rather than by noise, so a validation of this kind can appear healthy
+while the quantity of interest is substantially wrong.
 \end{remark}
 
 \subsection{The compliant loop without a dynamic model}

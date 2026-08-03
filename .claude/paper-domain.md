@@ -64,6 +64,26 @@ reencuadrada como error acoplado vs desacoplado. Se eliminaron figueredo2013dq y
 adorno2021dqrobotics.
 - **Chiacchio et al., 1997** — politopos de fuerza — se usa en su rol clásico para
   el umbral de saturación (Sec. V-C) — [context]
+- **Wong & Suleiman, IEEE T-RO 2024** — ⛔ **vecino directo de C1, encontrado el
+  03/08/2026.** *Sensor observability analysis*: índice y elipsoide por
+  configuración de qué ejes de tarea observan los sensores de par; demuestra en un
+  Baxter una postura donde la fuerza en x es invisible con verdad de terreno; ya
+  conecta con `N(Jᵀ)`. **Leído entero.** No cuantifica el error en newtons, no
+  trata la mal-atribución fuerza→momento, no reduce a contacto puntual, y su
+  deficiencia viene del montaje de sensores, no de `n<6`. Ver
+  `.claude/lit-review-2026-08.md` — [must-cite, delta ya escrito en Sec. II-B]
+- **Lu, Shen & Zhuang, Automatika 2023** — ⛔ vecino del gating: optimiza
+  configuraciones de un robot de 6 juntas por **número de condición del
+  Jacobiano** para mejorar la estimación de fuerza. ⚠️ **Solo resumen leído**
+  (T&F 403). — [must-cite]
+- **de Wolde et al., IROS 2024** — ⛔ vecino directo de C2: control de impedancia
+  en brazo comandado por CORRIENTE, sin sensor F/T, calibrando la relación
+  corriente/par y la fricción. ⚠️ **Solo resumen leído.** La diferencia que
+  sostiene C2 (ellos comandan par, acá se comanda `q̇`) es real pero más fina de
+  lo que decía el borrador. — [must-cite]
+- **Scherzinger et al., 2022 (FDCC)** — la interfaz de VELOCIDAD da mejor
+  compliance que la de posición en robots comerciales. ⇒ *"velocidad para
+  compliance"* no se puede presentar como hallazgo — [context]
 
 ## Positioning
 
@@ -124,6 +144,22 @@ Condiciones para que alcance: (1) la búsqueda bibliográfica confirma que nadie
 reunió antes la caracterización; (2) el hardware valida predicción direccional,
 efecto del condicionamiento y viabilidad del par desde corriente; (3) gating y
 fallo de correlación se presentan como consecuencias, no como métodos nuevos.
+
+**Estado de la condición 1 (03/08/2026): PARCIAL.** Se corrió la búsqueda,
+`refs.bib` pasó de 14 a 31 entradas, y los tres vecinos nuevos ya están citados con
+su delta en el manuscrito. Falta: texto completo de Lu 2023 y de Wolde 2024, y el
+barrido de citas HACIA ADELANTE de Magrini 2014 y Wong 2024. Registro completo en
+`.claude/lit-review-2026-08.md`.
+
+⚠️ **Lo que la búsqueda quitó de la mesa:** que existan direcciones ciegas
+dependientes de la configuración, medibles con un elipsoide (Wong 2024); que el
+condicionamiento del Jacobiano gobierne la exactitud y sirva para elegir posturas
+(Lu 2023); que la cadena corriente→par→compliance sin sensor F/T sea nueva
+(de Wolde 2024); y que la velocidad sea mejor interfaz que la posición para
+compliance (Scherzinger 2022). Lo que **queda**: la magnitud y prevalencia de la
+pérdida sobre el espacio de trabajo, la **mal-atribución** fuerza→momento espurio
+que `P_ff` predice, el fallo silencioso de la correlación, y el cruce `n<6` +
+actuación en velocidad.
 
 ⚠️ **Un ensayo sin carga conocida no valida la tesis.** Valida ruido, deriva y
 dependencia postural. Para exactitud y mal-atribución hace falta carga conocida en
