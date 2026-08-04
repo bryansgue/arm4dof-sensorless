@@ -1,0 +1,36 @@
+# Entorno de este trabajo. Hay DOS listas y no son la misma: una registra donde se
+# produjeron los numeros, la otra es la que conviene instalar para reproducirlos
+# sin ruido. No colapsarlas.
+
+# ── 1. ENTORNO ORIGINAL — con el que se produjeron TODOS los numeros del paper ──
+# Python 3.10.12
+# numpy    1.26.4
+# scipy    1.8.0      <- emite un aviso, ver abajo
+# casadi   3.7.2
+# acados   v0.5.4-6-ge0759960c   commit e0759960cae76e4f2e8177cf2866a6ab088f4e86
+# acados_template 0.5.1, instalado desde ese checkout (interfaces/acados_template),
+#                 NO desde PyPI. Es la dependencia mas sensible del repositorio:
+#                 el codigo C generado y la API de AcadosOcpSolver cambian entre
+#                 versiones, asi que el commit es parte del resultado.
+#
+# ⚠️ El aviso que aparece al importar cualquier script:
+#     "A NumPy version >=1.17.3 and <1.25.0 is required for this version of SciPy
+#      (detected version 1.26.4)"
+#   Lo emite scipy 1.8.0, que declara ese tope. NO afecto ninguna corrida: ningun
+#   script de este repositorio importa scipy (verificado sobre ocp_generation/ y
+#   hw/); entra como dependencia transitiva de acados_template. Es cosmetico.
+
+# ── 2. ENTORNO RECOMENDADO — para reproducir sin el aviso ──────────────────────
+# Subir scipy en vez de bajar numpy: asi no se toca la version con la que se
+# generaron los numeros.
+numpy==1.26.4
+scipy>=1.11
+casadi==3.7.2
+matplotlib                 # solo para las figuras
+
+# acados NO se instala con pip. Del checkout:
+#   git clone https://github.com/acados/acados ~/acados
+#   git -C ~/acados checkout e0759960cae76e4f2e8177cf2866a6ab088f4e86
+#   git -C ~/acados submodule update --recursive --init
+#   ... build ...
+#   pip install -e ~/acados/interfaces/acados_template

@@ -3,16 +3,17 @@
 Estimación de fuerza de contacto **sin sensor** y control compliant para un brazo
 4DOF de servos comerciales (Dynamixel MX-28R). Paper listo para IEEE Access.
 
-> **Entrada rápida:** el paper está en `paper/` (14 pág, compila limpio). Lo único
-> que bloquea el envío es confirmar la **autoría**. Ver `paper/SUBMISSION.md`.
+> **Entrada rápida:** el paper está en `paper/` (18 pág, compila limpio). Lo único
+> que bloquea el envío es confirmar la **afiliación**. Ver `paper/SUBMISSION.md`,
+> y `paper/RESPONSE.md` para la respuesta a la segunda revisión del asesor.
 
 ---
 
-## Estado (01/08/2026)
+## Estado (04/08/2026)
 
 | | |
 |---|---|
-| paper | `paper/main.tex`, **15 pág**, IEEE Access, 0 errores, lint clean, **33 refs** |
+| paper | `paper/main.tex`, **18 pág**, 12 tablas, IEEE Access, 0 errores, lint clean, **33 refs** |
 | bloqueo | **la afiliación** (decisión del autor). Autoría única ya aplicada. ORCID en el portal, fotos en cámara lista |
 | hardware | **nada probado en el brazo real.** `hw/` listo, procedimientos validados |
 | rama | `master` (mergeado desde `sensorless-contact-model`), sin pushear |
@@ -22,6 +23,84 @@ y limitaciones. No suavizar eso: es el punto que un revisor va a atacar y la
 defensa es que está declarado.
 
 ---
+
+## ⛔ SEGUNDA REVISIÓN DEL ASESOR (04/08/2026) — Major Revision
+
+**Respuesta punto por punto: `paper/RESPONSE.md`.** Todo lo verificable de esa
+revisión se comprobó contra el código y **era correcto**. Resumen de lo que cambió:
+
+| hallazgo | estado |
+|---|---|
+| **La norma del wrench no es dimensionalmente homogénea.** `‖f‖²+‖m‖²` suma N con N·m: presupone una longitud, y la pseudoinversa sin ponderar la fija en **1 m sin declararlo**, con el brazo midiendo 0.233 m de alcance medio | ✅ Sec. IV-C nueva: formulación ponderada, punto de referencia declarado, tabla de sensibilidad, Proposición 2 |
+| validación solo simulada | ⛔ abierto, requiere el brazo. Lenguaje calibrado |
+| el gating no informaba qué fracción del espacio conserva | ✅ columna nueva: el umbral 0.06 retiene **31.4 %** |
+| Tablas 12 y 13 discrepaban sin gating | ✅ era N=2000 vs N=1500; igualadas |
+| faltaba variabilidad entre semillas | ✅ 5 semillas, intervalos reportados |
+| *"independent physics engine"* y el 1e-10 se leían como validación física | ✅ reescrito en las 4 apariciones |
+| *"the noise the MX-28R actually delivers"* con efectos simulados | ✅ ahora dice que es un modelo desde hoja de datos |
+| 15 tablas diluyen el aporte | ✅ **16 → 12** |
+| README y checklist decían 9 y 14 páginas, y tres autores | ✅ sincronizados |
+
+### Lo que SOBREVIVE a la métrica, y es el resultado nuevo
+
+⚠️ **No es todo o nada.** Verificado numéricamente sobre 2197 configuraciones y 9
+valores de ℓ_c (`ocp_generation/metric_sensitivity.py`):
+
+| | |
+|---|---|
+| **invariante** | el conjunto de fuerzas recuperadas exacto (probado analíticamente) |
+| **invariante** | los autovectores de `M(ℓ_c)`: QUÉ direcciones se pierden. Ángulo principal máximo **2.6e-6 grados** |
+| **invariante** | el peor caso, 99.6 % para todo ℓ_c ≥ 0.15 m |
+| **invariante** | `‖M f − f‖ = (1−λ_min)·|cos θ|`, exacta POR POSE |
+| **NO invariante** | los autovalores, el 50.5 % (→ 38.0 % a la escala del brazo), el "100 % de configuraciones con λ_min<0.10" (→ 6 % a ℓ_c=0.05) |
+
+✅ **Y quedó DEMOSTRADA, no observada (ronda 3).** Con la junta 1 sobre `e_z` y
+las juntas 2-4 sobre un eje horizontal común `a`:
+
+    ker Jw = {x_1 = 0, x_2+x_3+x_4 = 0}   ->   P = Jv(ker Jw) = a^⊥   si dim P = 2
+    toda f en P se recupera exacta para todo l_c   ->   M(l_c) = I − (1−λ) a aᵀ
+
+Los autovectores no dependen de `ℓ_c` **porque los tres ejes de pitch son
+paralelos**. Para un Jacobiano genérico es FALSO, y el paper lo dice.
+
+⚠️ La hipótesis `dim Jv(ker Jw)=2` **es** el espectro `{λ,1,1}`: coinciden en el
+100 % de las 2197 configuraciones, y ambas valen en el 92.3 %. El resto son las
+singulares del borde. El 92 % dejó de ser un número sin explicación.
+
+⚠️ **El rango del estimador ponderado es `col(W⁻²J)`, NO `W⁻¹col(J)`.** El error
+estaba en la primera versión de la demostración. Corregido, la parte (i) sale en
+una línea: `[f;0] ∈ col(W⁻²J) ⟺ Jw x = 0 y Jv x = f`, donde `ℓ_c` no puede
+aparecer.
+
+⚠️ Si se verifica numéricamente, hacerlo sobre **autoespacios**: la base del
+degenerado es arbitraria y comparar autovectores uno a uno da 90°, artefacto.
+
+⚠️ **La correlación 0.9993 está favorecida por la métrica**, y el paper ahora lo
+dice. Por pose es exactamente 1.000000 a cualquier ℓ_c (es una identidad
+algebraica); agrupada mide cuánto se parecen las pendientes `1−λ_min` de las seis
+poses. A ℓ_c=0.05 m las mismas 12000 direcciones dan **0.4475**.
+
+⚠️ El nominal quedó en **ℓ_c = 1 m**, llamado *unweighted-SI baseline* y no
+"métrica natural". El asesor lo respaldó: cambiarlo a 0.233 m haría que el paper
+dejara de cuantificar la práctica que critica.
+
+⚠️ **Los residuos numéricos del manuscrito tienen que ser los de la sección G de
+`metric_sensitivity.py`, y de ninguna otra prueba.** Hubo una versión con `9e-8` y
+`9e-12`, que salían de 400 configuraciones al azar SIN filtrar por
+`dim Jv(ker Jw)=2`: con las casi singulares adentro el residuo se degrada seis
+órdenes. Los correctos son 6e-14 sobre el plano y 8e-15 sobre el eje de pitch.
+
+⚠️ El aviso `A NumPy version >=1.17.3 and <1.25.0 is required for this version of
+SciPy` es de **scipy 1.8.0**, y es cosmético: **ningún script del repo importa
+scipy**, entra por `acados_template`. Se cierra con `scipy>=1.11`, que es
+preferible a bajar numpy porque no toca la versión con la que se generó todo.
+
+⚠️ `requirements.txt` lista **dos entornos y no son el mismo**: el ORIGINAL, donde
+se produjeron los números (scipy 1.8.0, con aviso), y el RECOMENDADO para
+reproducir limpio (scipy>=1.11). No colapsarlos: el primero es un registro, el
+segundo una instrucción. Y ahí está fijado el commit de acados
+(`e0759960cae76e4f2e8177cf2866a6ab088f4e86`, `v0.5.4-6`), que es la dependencia más
+sensible del repo porque el código C generado cambia entre versiones.
 
 ## ⛔ REVISIÓN DEL ASESOR (02/08/2026) — leer antes de tocar el paper
 
@@ -109,11 +188,14 @@ sensibilidad.
 ## Evidencia por contribución
 
 **C1** — el inverso 6-D min-norm está indeterminado y reparte la fuerza como
-momento espurio: pierde **50.5%** en promedio sobre 2197 configuraciones (peor
-caso 99.6%) y **falla en silencio**, con correlación 0.997 contra verdad. El de
-contacto puntual es exacto si `rank(Jv)=3`, que se cumple en el 100%. Contra
-MuJoCo: RMSE **2.227 → 0.157 N**.
-→ `observability_map.py`, `test_direction_sweep.py`, `mj_wrench_test.c`
+momento espurio: pierde **50.5%** en promedio sobre 2197 configuraciones bajo la
+métrica sin ponderar de la práctica estándar (**38.0%** a la escala del brazo,
+peor caso 99.6% con las dos) y **falla en silencio**, con correlación 0.997 contra
+verdad. El de contacto puntual es exacto si `rank(Jv)=3`, que se cumple en el 100%,
+y **no admite elección de métrica**, que es un argumento a su favor independiente
+de la exactitud. Contra MuJoCo: RMSE **2.227 → 0.157 N**.
+→ `observability_map.py`, `test_direction_sweep.py`, `metric_sensitivity.py`,
+`mj_wrench_test.c`
 
 Más: la cota `‖δf‖ ≤ ‖δτ‖/σ_min(Jv)` **verificada en la planta MuJoCo** con ruido
 inyectado — pendiente −0.872, R² 0.980. → `hw/test_conditioning_law.py`
@@ -123,8 +205,15 @@ es mal planteada sin identificar el lazo del servo y falla en todos los solves; 
 cinemática (V0) no usa `M`, `h` ni `kv` y **iguala a la de par a 1/25 del costo**.
 Compliance en dos regímenes separados por la capacidad del actuador: el brazo
 ejerce 3.9-5.9 N en su peor dirección, el guiado manual pide 5-15 N; `ee/ref` pasa
-de ~1 a ~1.9 y la saturación de 0% a 100% entre 5 y 6 N.
-→ `generate_arm_vel_ocp.py`, `test_vel_vs_torque.py`, `reproduce_paper_tables.py`
+de ~1.34 a ~2.65 y la saturación de 0% a >97% **entre 6 y 8 N**, que es donde cae
+la capacidad estática de esa pose y esa dirección (6.53 N).
+→ `generate_arm_vel_ocp.py`, `test_vel_vs_torque.py`, `test_compliance_regimes.py`
+
+⚠️ Esos números de régimen **cambiaron el 04/08/2026**: la tabla publicada no la
+reproducía ningún script. Y en la ronda 3 volvieron a cambiar, porque la meseta de
+0.9 s no era estado estacionario: ahora dura 3.0 s = seis constantes de tiempo y
+el comandado coincide con `‖f‖/(D·k)` a 0.3 %. La fila de 15 N se eliminó y el
+script exige `status == 0` por fila. Ver `paper/RESPONSE.md`.
 
 ---
 
@@ -181,6 +270,25 @@ Por eso existe `reproduce_paper_tables.py`.
 **Cada número es UNA corrida hasta que se repite.** El timing varía 17% entre
 corridas del mismo binario.
 
+**Una tabla sin script guardado es una tabla sin verificar, y el `reproduce_` no
+garantiza nada por existir.** La auditoría del 01/08/2026 creó
+`reproduce_paper_tables.py` para cerrar exactamente este defecto, y `tab:regimes`
+se le escapó: al escribirle el script (04/08/2026) **los números no reprodujeron**
+y la transición entre regímenes se movió de 5-6 N a 6-8 N. La forma de detectarlo
+no fue leer el código sino **mapear cada tabla del PDF a un script y no encontrar
+uno**.
+
+**Comparar contra el número que corresponde, no contra el que está a mano.** El
+texto validaba la transición de esa tabla contra la mediana del espacio de trabajo
+en la PEOR dirección (5.88 N), cuando el experimento es en UNA pose y UNA
+dirección, cuya capacidad estática es 6.53 N. La mediana acota por abajo, no
+predice.
+
+**Una ventana de medición tiene que ser más larga que la constante de tiempo del
+sistema.** Promediar el tramo plano completo subestimaba el desplazamiento un 35 %
+porque la admitancia tiene τ = 1/k_return = 0.5 s y el tramo dura 0.9 s. Lo delató
+comparar contra el valor analítico `‖f‖/(D_trans·k_return)`.
+
 ---
 
 ## Reproducir los números del paper
@@ -195,6 +303,8 @@ python3 test_interaction_mil.py    # lazo compliant, dos estimadores
 python3 test_noise_montecarlo.py   # ruido de servo + gating
 python3 test_vel_vs_torque.py      # T vs V1 vs V0
 python3 test_e4bis.py              # ablación de la métrica
+python3 metric_sensitivity.py      # sensibilidad a l_c + invariancia (NUEVO)
+python3 test_compliance_regimes.py # los dos regímenes, con saturación (NUEVO)
 python3 reproduce_paper_tables.py  # las 5 tablas que antes eran inline
 python3 make_figures.py            # figuras 3 y 4
 python3 make_arch_figure.py        # figura 1
@@ -292,6 +402,7 @@ hace momento sobre eje vertical. Necesita tiro horizontal.
 | archivo | qué tiene |
 |---|---|
 | **`CLAUDE.md`** | este archivo: estado, correcciones, trampas |
+| `paper/RESPONSE.md` | **respuesta a la revisión del asesor del 04/08/2026** |
 | `paper/SUBMISSION.md` | checklist de envío, auditoría de reproducibilidad, defensas |
 | `paper/README.md` | cómo compilar, de dónde sale cada número |
 | `hw/README.md` | plan de bring-up, auditoría del banco MuJoCo, poder de detección |
@@ -304,12 +415,13 @@ hace momento sobre eje vertical. Necesita tiro horizontal.
 ## Pendientes, en orden
 
 ⛔ **LO ÚNICO QUE BLOQUEA EL ENVÍO HOY: la afiliación.** Quedó LASER/UFPB, marcada
-con comentario en `main.tex:54`. Es decisión del autor.
+con comentario en `main.tex:57`. Es decisión del autor.
 
 1. ✅ **Posicionamiento contra Magrini** reescrito (commit `68b104c`).
 2. ✅ **Jerarquía acordada aplicada** (C1 principal, C2 co-principal, NMPC
-   demostrador) y comprimido. 15 páginas.
-3. **S3, las dos partes**, en hardware. Requiere el brazo montado.
+   demostrador) y comprimido.
+3. **S3, las dos partes**, en hardware. Requiere el brazo montado. Es lo que el
+   asesor estima que mueve la aceptación de 40-50 % a 65-75 %.
 4. ✅ **Búsqueda bibliográfica — HECHA (03/08/2026).** `refs.bib` 14 → **33**,
    metadatos verificados contra Crossref/Semantic Scholar, cero referencias sin
    citar, más el barrido de citas hacia adelante (130 revisadas). Aparecieron
@@ -331,10 +443,20 @@ con comentario en `main.tex:54`. Es decisión del autor.
 8. Conseguir el texto de `wahrburg2018motorcurrent` si alguna vez hace falta
    afirmar algo de su método. Hoy se cita al nivel del título.
 
+9. ✅ **Métrica del wrench** (04/08/2026): Sec. IV-C, Proposición 2, tabla de
+   sensibilidad, `metric_sensitivity.py`. ⚠️ El nominal ℓ_c = 1 m es decisión
+   abierta.
+10. ✅ **`tab:regimes` ahora se reproduce** (`test_compliance_regimes.py`), y sus
+   números cambiaron. ⚠️ Confirmar con el asesor: se cambió una tabla de
+   resultados contra una reimplementación, porque el código original no existía.
+
 ⚠️ **Ya no queda material fácil de cortar.** Se sacaron la ablación de la métrica,
-"compliant vs rígido" (N=6) y la nota de implementación en tiempo real. Lo que
-queda sostiene C1 o C2. Recortar más cuesta evidencia — es decisión del asesor, no
-mecánica.
+"compliant vs rígido" (N=6), la nota de implementación en tiempo real, y en la
+ronda del 04/08/2026 cuatro tablas más (`timing`, `validation`, `threedirs`,
+`velocity`, sus números pasaron a prosa) y dos subsecciones del bloque del
+controlador. **16 → 12 tablas.** Aun así el material de la métrica cuesta ~2
+páginas netas y el PDF quedó en 17. Lo que queda sostiene C1 o C2: recortar más
+cuesta evidencia, y los candidatos están listados en `paper/RESPONSE.md`.
 
 ⚠️ **La razón de costo V0 vs T tiene DOS valores y los dos son correctos:** ~27×
 en el test de regulación (Tabla IV) y **25×** en el lazo compliant completo

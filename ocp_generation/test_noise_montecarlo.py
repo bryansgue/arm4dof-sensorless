@@ -50,8 +50,10 @@ def estimators(q, tau_ext):
 
 
 def trial(rng, noise=1.0, sigmin_floor=0.0):
+    tries = 0
     while True:
         q = rng.uniform(Q_LO, Q_HI)
+        tries += 1
         s = np.linalg.svd(J_(q)[:3, :], compute_uv=False)[2]
         if s >= sigmin_floor:
             break
@@ -64,17 +66,18 @@ def trial(rng, noise=1.0, sigmin_floor=0.0):
     # error de encoder -> el modelo evalua h y J en una q ligeramente distinta
     q_meas = q + noise*ENC_LSB*rng.uniform(-0.5, 0.5, 4)
     f6, f3 = estimators(q_meas, tau_meas)
-    return np.linalg.norm(f6-f), np.linalg.norm(f3-f), np.linalg.norm(f), s
+    return np.linalg.norm(f6-f), np.linalg.norm(f3-f), np.linalg.norm(f), s, tries
 
 
 def run(n=2000, noise=1.0, sigmin_floor=0.0, seed=0):
+    """Devuelve (err6 %, err3 %, fraccion de posturas RETENIDAS por el gate)."""
     rng = np.random.default_rng(seed)
-    e6 = []; e3 = []; mag = []
+    e6 = []; e3 = []; mag = []; drawn = 0
     for _ in range(n):
-        a, b, m, _ = trial(rng, noise, sigmin_floor)
-        e6.append(a); e3.append(b); mag.append(m)
+        a, b, m, _, t = trial(rng, noise, sigmin_floor)
+        e6.append(a); e3.append(b); mag.append(m); drawn += t
     e6 = np.array(e6); e3 = np.array(e3); mag = np.array(mag)
-    return 100*e6/mag, 100*e3/mag       # error relativo [%]
+    return 100*e6/mag, 100*e3/mag, n/drawn
 
 
 if __name__ == "__main__":
@@ -88,7 +91,7 @@ if __name__ == "__main__":
     print("-"*74)
     for lab, nz in [("sin ruido", 0.0), ("nominal (x1)", 1.0),
                     ("degradado (x2)", 2.0), ("malo (x4)", 4.0)]:
-        r6, r3 = run(noise=nz)
+        r6, r3, _ = run(noise=nz)
         print(f"{lab:>22} | {np.median(r6):8.2f} {np.percentile(r6,90):8.2f} "
               f"{np.percentile(r6,99):8.2f} | {np.median(r3):8.2f} "
               f"{np.percentile(r3,90):8.2f} {np.percentile(r3,99):8.2f}")
@@ -96,16 +99,21 @@ if __name__ == "__main__":
     print()
     print("=" * 74)
     print("Efecto del condicionamiento: descartando posturas con sigma_min bajo")
-    print("(ruido nominal)")
+    print("(ruido nominal, MISMO N=2000 y MISMA semilla que la tabla de arriba, para")
+    print(" que la fila umbral=0 coincida exactamente con 'nominal')")
     print("=" * 74)
-    print(f"{'umbral sigma_min':>18} | {'6-D mediana':>12} {'6-D p90':>10} | "
-          f"{'3-D mediana':>12} {'3-D p90':>10}")
+    print(f"{'umbral sigma_min':>16} {'retenido':>9} | {'6-D mediana':>12} {'6-D p90':>9} | "
+          f"{'3-D mediana':>12} {'3-D p90':>9}")
     print("-"*74)
     for fl in [0.0, 0.02, 0.04, 0.06]:
-        r6, r3 = run(n=1500, noise=1.0, sigmin_floor=fl)
-        print(f"{fl:18.2f} | {np.median(r6):12.2f} {np.percentile(r6,90):10.2f} | "
-              f"{np.median(r3):12.2f} {np.percentile(r3,90):10.2f}")
+        r6, r3, keep = run(n=2000, noise=1.0, sigmin_floor=fl)
+        print(f"{fl:16.2f} {100*keep:8.1f}% | {np.median(r6):12.2f} "
+              f"{np.percentile(r6,90):9.2f} | {np.median(r3):12.2f} "
+              f"{np.percentile(r3,90):9.2f}")
     print()
+    print("⚠️ 'retenido' es la fraccion de posturas del espacio de trabajo que el gate")
+    print("   ACEPTA. Bajar el percentil de error rechazando la mitad del espacio no es")
+    print("   una mejora gratuita, y el numero tiene que estar a la vista.")
     print("La cota ||df|| <= ||dtau||/sigma_min predice que descartar posturas mal")
     print("condicionadas acota la cola del estimador de contacto puntual. El 6-D no")
     print("mejora, porque su error no viene del ruido sino de la mala atribucion.")

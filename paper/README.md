@@ -1,11 +1,14 @@
 # Manuscrito — IEEE Access
 
-**Contact-Model-Aware Sensorless Force Estimation and Compliant Dual Quaternion
-Predictive Control for Low-Cost Under-Actuated Manipulators**
+**Sensorless Contact-Force Estimation on Low-DoF, Velocity-Actuated Manipulators:
+A Quantitative Design Framework**
 
-9 páginas. Formato `ieeeaccess.cls` tomado de
-`~/python/Time_optimal_planing-NMPC/ACCESS_latex` (solo el formato; nada de
-contenido de ahí).
+18 páginas, 12 tablas, 4 figuras, 33 referencias. Autoría única. Formato
+`ieeeaccess.cls` tomado de `~/python/Time_optimal_planing-NMPC/ACCESS_latex`
+(solo el formato; nada de contenido de ahí).
+
+> **Respuesta punto por punto a la revisión del asesor (04/08/2026): `RESPONSE.md`.**
+> **Checklist de envío: `SUBMISSION.md`.**
 
 ## Compilar
 
@@ -18,6 +21,12 @@ Compila con 0 errores y 0 referencias sin resolver.
 ⚠️ Los ~21 avisos `Overfull \hbox (505.12pt)` son del **`.cls`**, no del texto: el
 template original los produce igual. No tocarlos.
 
+Lint de prosa (términos vedados, ortografía americana, AI-tells):
+
+```bash
+python3 ~/.claude/plugins/cache/huao/ral-reviewer/*/skills/ral-reviewer/lint_prose.py main.tex
+```
+
 ## La tesis, en una frase
 
 En brazos con menos juntas que dimensiones de tarea, lo que limita la estimación
@@ -25,10 +34,18 @@ sin sensor **no es el rango del Jacobiano sino el modelo de contacto que asume e
 estimador**. El pseudo-inverso 6D estándar está indeterminado y reparte la fuerza
 de contacto como momento espurio; con contacto puntual en punto conocido el
 problema es sobre-determinado y la fuerza se recupera exacta si `rank(Jv)=3`, que
-se cumple en el 100% del espacio de trabajo.
+se cumple en el 100 % del espacio de trabajo.
 
-Números duros: el 6D pierde 50.5% de la fuerza en promedio (peor caso 99.6%);
-contra MuJoCo el RMSE baja de 2.227 N a 0.157 N, factor 14.
+Números duros: el 6D pierde **50.5 %** de la fuerza en promedio bajo la métrica sin
+ponderar de la práctica estándar, **38.0 %** bajo la escala propia del brazo, y
+99.6 % en el peor caso bajo cualquiera de las dos; contra MuJoCo el RMSE baja de
+2.227 N a 0.157 N, factor 14.
+
+⚠️ **El escalar depende de la métrica del wrench y el paper lo declara.** La norma
+`‖f‖² + ‖m‖²` suma N con N·m, así que presupone una longitud; la pseudoinversa sin
+ponderar la fija en 1 m sin decirlo. Lo que NO depende de esa elección: qué
+direcciones se pierden, el conjunto de fuerzas recuperadas exacto, y el peor caso.
+Ver Sec. IV-C y `RESPONSE.md`.
 
 ⚠️ Esto **corrige** los dos borradores anteriores (Mechatronics y L-CSS), que
 afirmaban que el brazo tenía una dirección de fuerza ciega. Ver
@@ -36,52 +53,56 @@ afirmaban que el brazo tenía una dirección de fuerza ciega. Ver
 
 ## Antes de enviar
 
-1. **Autores, afiliaciones, correo de contacto, financiación, agradecimiento** —
-   todo son marcadores `[...]`.
-2. **Biografías con foto**: IEEE Access las pide. El template las trae como
-   `\begin{IEEEbiography}[{\includegraphics{...}}]{Nombre}`. Hoy no están.
-3. **Cabecera**: el desborde de 9.3 pt en `\markboth` desaparece al poner nombres
-   reales (hoy dice `[Author]`).
+1. ⛔ **La afiliación** — único bloqueo. LASER/UFPB, comentario en `main.tex:57`.
+2. **ORCID**: se carga en el portal, no en el `.tex`.
+3. **Biografía con foto**: hoy `IEEEbiographynophoto`, que compila. La foto va en
+   cámara lista.
 4. **Figuras** se regeneran:
    ```bash
    cd ../ocp_generation
-   python3 observability_map.py    # figures/observability_map.png
-   python3 make_figures.py         # figures/metric_ablation.png, interaction_traces.png
+   python3 observability_map.py     # figures/observability_map.png
+   python3 test_direction_sweep.py  # figures/direction_sweep.png
+   python3 make_figures.py          # figures/interaction_traces.png
+   python3 make_arch_figure.py      # figures/architecture.png
    ```
-   ⚠️ `metric_ablation.png` ya no se cita en el texto: la ablación quedó como
-   Tabla V. Si se quiere como figura, agregarla en Sec. VI-F.
 
 ## De dónde sale cada número
 
 Nada escrito a mano.
 
-| sección | qué reporta | script |
+| tabla | qué reporta | script |
 |---|---|---|
-| III-D, Tab. 1 | validación del modelo vs MuJoCo | `arm_dynamics.py`, `arm_kinematics.py` |
-| IV, Tab. 2 | los dos estimadores, barrido 2197 configs, condicionamiento | `observability_map.py` |
-| IV-C | exactitud del estimador de contacto puntual | `wrench_estimator.py` |
-| VI-A, Tab. 3 | comparación en lazo cerrado | `test_interaction_mil.py` |
-| VI-B | validación contra MuJoCo (2.227 vs 0.157 N) | `mj_wrench_test.c` |
-| VI-C, Tab. 4 | compliant vs rígido, pareado N=6 | `mj_stats.c` |
-| VI-D | regulación y trayectoria | `test_arm_dqnmpc.py`, `test_trajectory.py` |
-| VI-D, Tab. 5 | timing, grafo vs escalar | `timing_test.c` |
-| VI-F, Tab. 6 | ablación de la métrica se(3) | `test_e4bis.py` |
+| `tab:gap` | comparación con el trabajo previo | literatura, sin script |
+| `tab:metric` | **sensibilidad a ℓ_c**, la métrica del wrench | `metric_sensitivity.py` |
+| `tab:sweep` | barrido de 2197 configs, rank y condicionamiento | `observability_map.py` |
+| `tab:dirsweep` | 12000 direcciones de empuje, seis poses | `test_direction_sweep.py` |
+| `tab:regimes` | los dos regímenes de compliance | `test_compliance_regimes.py` ⚠️ |
+| `tab:formulations` | T vs V1 vs V0 | `test_vel_vs_torque.py` |
+| `tab:mil` | lazo cerrado, dos modelos de contacto sobre el MISMO residuo | `test_interaction_mil.py` |
+| `tab:v0loop` | lazo compliant completo con V0 en vez de T | `test_vel_vs_torque.py` |
+| `tab:noise` | Monte Carlo con ruido de servo, N=2000 | `test_noise_montecarlo.py` |
+| `tab:gating` | gating por `σ_min(Jv)` **+ workspace retenido** | `test_noise_montecarlo.py` |
+| `tab:condlaw` | ley `1/σ_min` en la planta MuJoCo | `../hw/test_conditioning_law.py` |
+| `tab:faults` | inyección de fallas de modelo y calibración | `reproduce_paper_tables.py` |
 
-Tests en C: preparar la escena primero.
+⚠️ `tab:regimes` NO se reproducía con ningún script guardado hasta el
+04/08/2026, y al escribirlo los números cambiaron. Ver `RESPONSE.md`.
 
-```bash
-S=~/mujoco_ws/src/acp_mujoco_simulator/model/arm4dof
-python3 -c "s=open('$S/scene_arm4dof_vel.xml').read(); \
-  open('/tmp/vel.xml','w').write(s.replace('meshdir=\"assets/\"','meshdir=\"$S/assets/\"'))"
-```
+Números en prosa que antes eran tabla (se comprimió el bloque del controlador):
+validación del modelo vs MuJoCo (`arm_dynamics.py`, `arm_kinematics.py`), reparto
+del residuo por `kv` y timing grafo-vs-escalar (`timing_test.c`), y las tres
+direcciones con nombre (`reproduce_paper_tables.py`).
+
+Validación contra MuJoCo (2.227 → 0.157 N): `mj_wrench_test.c`. Tests en C:
+preparar la escena primero con `hw/mj_arm.ensure_scene()`.
 
 ## Qué falta
 
-Todo es simulación, y el manuscrito lo declara en el abstract, en la introducción
-y en Limitations.
+Todo es simulación, y el manuscrito lo declara en el abstract, en la introducción,
+en el alcance y en Limitations.
 
-- **HW-1** estimación contra peso colgado conocido, en configuración **bien y mal
-  condicionada** (`σ_min(Jv)` alto y bajo). Es la predicción falsable del paper.
-- **HW-2/3/4** hand-guiding, compliant vs rígido (**pareado**), trayectoria.
-- **Código**: extender el estimador a punto de contacto desconocido a lo largo del
-  eslabón (Remark 3), en la línea de la referencia [5].
+- **S3, LAS DOS PARTES** (`../hw/s3_conditioning.py`): dispersión sin carga (valida
+  la ley de condicionamiento) **y** carga conocida en dos direcciones (valida
+  exactitud y mal-atribución). ⚠️ La parte A sola no alcanza.
+- **Extender el estimador** a punto de contacto desconocido a lo largo del eslabón
+  (Remark 3).
