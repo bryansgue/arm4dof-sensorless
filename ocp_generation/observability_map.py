@@ -146,20 +146,28 @@ if __name__ == "__main__":
                 qq = np.array([0., A, B, 0.4])
                 Z6[i, j] = np.linalg.eigvalsh(force_block(qq))[0]
                 ZS[i, j] = force_svd(qq)[2]
+        # ⚠️ NO fijar vmax=1 en el panel (a): lam_min no pasa de 0.08 en toda la
+        # rebanada, asi que con la escala 0-1 el mapa entero cae en el 8 % inferior
+        # del colormap y sale NEGRO, sin estructura visible. Se escala al dato y se
+        # declara el rango en la etiqueta, que es lo que transmite "casi cero".
         fig, ax = plt.subplots(1, 2, figsize=(10.5, 3.9))
-        im0 = ax[0].pcolormesh(np.degrees(a3), np.degrees(a2), Z6, cmap="magma",
-                               vmin=0, vmax=1, shading="auto")
+        im0 = ax[0].pcolormesh(np.degrees(a3), np.degrees(a2), Z6, cmap="plasma",
+                               vmin=0, vmax=Z6.max(), shading="auto")
         ax[0].set_title(r"(a) 6-D min-norm: worst-direction $\lambda_{\min}(P_{ff})$", fontsize=9)
-        fig.colorbar(im0, ax=ax[0], label="force fraction returned")
+        cb0 = fig.colorbar(im0, ax=ax[0])
+        cb0.set_label(f"force fraction returned (max {Z6.max():.3f})", fontsize=8)
         im1 = ax[1].pcolormesh(np.degrees(a3), np.degrees(a2), ZS, cmap="viridis",
                                shading="auto")
         ax[1].set_title(r"(b) point-contact model: $\sigma_{\min}(J_v)$", fontsize=9)
-        fig.colorbar(im1, ax=ax[1], label="noise gain limit")
+        cb1 = fig.colorbar(im1, ax=ax[1])
+        cb1.set_label("noise gain limit", fontsize=8)
         for k in (0, 1):
             ax[k].set_xlabel(r"$q_3$ [deg]"); ax[k].set_ylabel(r"$q_2$ [deg]")
             ax[k].plot(np.degrees(-0.9), np.degrees(1.2), "w*", ms=12, mec="k")
         fig.suptitle("Force estimation over the workspace: the 6-D inverse loses force "
                      "where the point-contact model does not", fontsize=10)
+        print(f"  panel (a): lam_min en [{Z6.min():.4f}, {Z6.max():.4f}]"
+              f"   panel (b): sig_min en [{ZS.min():.4f}, {ZS.max():.4f}]")
         fig.tight_layout()
         out = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "figures")
         os.makedirs(out, exist_ok=True)

@@ -97,31 +97,49 @@ if __name__ == "__main__":
     print(f"  error maximo del contacto puntual sobre las 12000 direcciones = {e3.max():.2e} %")
     print("  => el error del 6-D lo explica la DIRECCION; el de contacto puntual no existe.")
 
+    # ── figura ────────────────────────────────────────────────────────────────
+    # ⚠️ La version anterior de esta figura no comunicaba nada. El panel (a) era un
+    # scatter de 12000 puntos que se veia como UNA banda roja —seis rectas casi
+    # identicas superpuestas— y desde que la identidad esta DEMOSTRADA, confirmar
+    # una recta con puntos no agrega. El panel (b) eran seis histogramas escalonados
+    # con 40-70 cuentas por bin: ruido visual. Ahora:
+    #   (a) la relacion por pose, una recta por pose, con su pendiente a la vista
+    #   (b) como esa pendiente 1-lam depende de l_c, que es el resultado nuevo
     try:
         import matplotlib
         matplotlib.use("Agg")
         import matplotlib.pyplot as plt
         plt.rcParams.update({"font.size": 9, "axes.grid": True, "grid.alpha": .3})
-        fig, ax = plt.subplots(1, 2, figsize=(9, 3.3))
-        ax[0].scatter(al, e6, s=1.5, alpha=.12, color="tab:red", rasterized=True)
-        ax[0].scatter(al, e3, s=1.5, alpha=.5, color="tab:blue", rasterized=True)
-        bx = np.linspace(0, 1, 21); ctr = .5*(bx[1:]+bx[:-1])
-        med = [np.median(e6[(al >= a) & (al < b)]) if ((al >= a) & (al < b)).sum() else np.nan
-               for a, b in zip(bx[:-1], bx[1:])]
-        ax[0].plot(ctr, med, "k-", lw=1.8, label="6-D median")
-        ax[0].set_xlabel("alignment with blind direction  $|\\cos\\theta|$")
-        ax[0].set_ylabel("relative force error [%]")
-        ax[0].set_title("(a) error is explained by direction", fontsize=9)
-        ax[0].legend(fontsize=7.5, loc="upper left")
-        ax[0].set_ylim(-5, 105)
-        for k in A:
-            ax[1].hist(A[k][1], bins=40, histtype="step", lw=1.2, label=k)
-        ax[1].set_xlabel("6-D relative force error [%]")
-        ax[1].set_ylabel("directions")
-        ax[1].set_title("(b) six poses, 2000 directions each", fontsize=9)
-        ax[1].legend(fontsize=7, ncol=2)
-        fig.suptitle("Point-contact error is below $10^{-12}$ % for every direction and pose",
-                     fontsize=9.5)
+
+        def Mw(q, lc):
+            """Bloque de fuerza del inverso 6-D ponderado. lc=1 es el sin ponderar."""
+            J = J_(q)
+            W2i = np.diag([1., 1., 1., lc*lc, lc*lc, lc*lc])
+            return (W2i @ J @ np.linalg.pinv(J.T @ W2i @ J) @ J[:3, :].T)[:3, :3]
+
+        # ⚠️ El panel de "error contra alineacion" se ELIMINO. Eran seis rectas de
+        # la misma pendiente superpuestas, o sea la ec. del error dibujada: no hay
+        # nada que leer ahi que la ecuacion no diga mejor. Queda UN panel, con lo
+        # unico que la ecuacion NO dice: como su pendiente depende de la metrica.
+        cmap = plt.get_cmap("tab10")
+        fig, ax = plt.subplots(figsize=(4.6, 3.4))
+
+        LCS = np.logspace(np.log10(0.03), np.log10(3.0), 60)
+        for k, (name, q) in enumerate(POSES.items()):
+            slope = [100*(1 - np.linalg.eigvalsh(Mw(q, lc))[0]) for lc in LCS]
+            ax.plot(LCS, slope, lw=1.7, color=cmap(k), label=name)
+        for x, lab in [(0.233, "arm scale"), (1.0, "unweighted SI")]:
+            ax.axvline(x, color="0.4", ls="--", lw=.9)
+            ax.annotate(lab, xy=(x, 4), rotation=90, fontsize=7.5,
+                        color="0.3", ha="right", va="bottom")
+        ax.set_xscale("log")
+        ax.set_xlabel(r"characteristic length  $\ell_c$  [m]")
+        ax.set_ylabel(r"error per unit alignment,  $100\,(1-\lambda_{\min})$  [%]")
+        ax.legend(fontsize=7.5, ncol=2, loc="upper left")
+        ax.set_ylim(0, 104); ax.set_xlim(LCS[0], LCS[-1])
+        ax.set_title("The six poses become indistinguishable\n"
+                     "only under the unweighted-SI metric", fontsize=9)
+
         fig.tight_layout()
         out = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "figures")
         os.makedirs(out, exist_ok=True)

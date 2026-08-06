@@ -720,9 +720,10 @@ $\Mlc$: for an arbitrary Jacobian the eigenvectors do move with $\lc$. It holds
 here, and it is worth proving rather than observing, because the reason is the
 architecture the paper is about.
 
-\begin{proposition}[Directional structure of a yaw-plus-coplanar-pitch arm]
-Let joint $1$ rotate about the vertical $\bm e_z$ and joints $2$ to $4$ about a
-common horizontal axis $\bm a$, and let $\mathcal{P}=\Jv(\ker\Jw)$. If
+\begin{proposition}[Directional structure of a yaw-plus-parallel-pitch arm]
+Let joint $1$ rotate about the vertical $\bm e_z$ and let the axes of joints $2$
+to $4$ be parallel to a common horizontal direction $\bm a$, the joint lines
+themselves being distinct. Let $\mathcal{P}=\Jv(\ker\Jw)$. If
 $\dim\mathcal{P}=2$, then $\mathcal{P}=\bm a^{\perp}$ and
 \begin{equation}
 \Mlc=\bm I-\big(1-\lambda(\lc)\big)\,\bm a\bm a^{\!\top} ,
@@ -949,39 +950,23 @@ We sweep the three pitch joints over their full ranges on a $13^3$ grid, fixing
 the base yaw since it only rotates the picture in the world frame and leaves every
 quantity of interest invariant. This gives $2197$ configurations, at each of which
 we compute the rank and singular values of $\Jv$ and apply a random unit contact
-force, recording the error of both estimators. Table~\ref{tab:sweep} summarizes
-and Fig.~\ref{fig:map} maps the outcome.
+force, recording the error of both estimators. Fig.~\ref{fig:map} maps the
+outcome over a slice of that grid.
 
-\begin{table*}[!t]
-\caption{Workspace sweep over $2197$ configurations. The contact force is exactly
-recoverable everywhere by the point-contact estimator, while the six-dimensional
-inversion discards half of it on average.}
-\label{tab:sweep}
-\centering
-\small
-\begin{tabular}{lcccc}
-\toprule
-quantity & mean & median & 5th percentile & extreme\\
-\midrule
-$\sigma_{\min}(\Jv)$ & $0.0500$ & $0.0496$ & $0.0127$ & $7.6\times10^{-5}$ (min)\\
-$\mathrm{cond}(\Jv)$ & --- & $6.7$ & --- & $29.4$ (95th percentile)\\
-$\mathrm{rank}\,\Jv=3$ & \multicolumn{4}{c}{$100\,\%$ of configurations}\\
-\midrule
-\multicolumn{5}{l}{\emph{error estimating a unit contact force}}\\
-six-dimensional, $\norm{\hat{\bm f}_{6}-\bm f}$ & $0.5046$ & $0.5110$ & --- & $0.9961$ (max)\\
-point contact, $\norm{\hat{\bm f}_{3}-\bm f}$ & $3.6\times10^{-15}$ & $7.1\times10^{-16}$ & --- & $1.4\times10^{-12}$ (max)\\
-\bottomrule
-\end{tabular}
-\end{table*}
 
 Two facts stand out. First, $\mathrm{rank}\,\Jv=3$ in $100\,\%$ of the grid, so by
-Proposition~\ref{prop:exact} the contact force is exactly recoverable everywhere,
-and the numerical error of $\hat{\bm f}_{3}$ is at machine precision. That
-statement involves no metric and no length. Second, over the same set the
+Proposition~\ref{prop:exact} the contact force is exactly recoverable everywhere.
+The numerical error of $\hat{\bm f}_{3}$ on a unit force is $3.6\times10^{-15}$ in
+the mean and never exceeds $1.4\times10^{-12}$, which is machine precision. That
+statement involves no metric and no length. What does limit the point-contact
+estimator is conditioning: $\sigma_{\min}(\Jv)$ has mean $0.0500$ and median
+$0.0496$ over the grid, falls to $0.0127$ at the fifth percentile and to
+$7.6\times10^{-5}$ at its worst, while $\mathrm{cond}(\Jv)$ has median $6.7$ and
+reaches $29.4$ at the ninety-fifth percentile. Second, over the same set the
 six-dimensional inversion discards $50.5\,\%$ of the applied force on average
-under the unweighted metric of standard practice, $38.0\,\%$ under the arm's own
-characteristic length, and in the worst configuration and direction essentially
-all of it under either. Table~\ref{tab:metric} gives the full dependence; only
+under the unweighted-SI baseline, with median $51.1\,\%$ and a worst case of
+$99.6\,\%$; under the arm's own characteristic length the mean falls to
+$38.0\,\%$ and the worst case stays where it was. Table~\ref{tab:metric} gives the full dependence; only
 the mean is metric-sensitive, and Propositions~\ref{prop:metric}
 and~\ref{prop:arch} identify which part of the conclusion that affects.
 
@@ -989,9 +974,12 @@ and~\ref{prop:arch} identify which part of the conclusion that affects.
 \centering
 \includegraphics[width=0.92\textwidth]{observability_map.png}
 \caption{Force estimation over a slice of the workspace ($q_1=0$, $q_4=0.4$~rad).
-(a) Worst-direction eigenvalue of $\Pff$, the fraction of a pure contact force
-that the six-dimensional inversion returns as force; close to zero throughout,
-which is the effect that has been misread as blindness of the mechanism.
+(a) Worst-direction eigenvalue of $\Pff$ at the unweighted-SI baseline, the
+fraction of a pure contact force that the six-dimensional inversion returns as
+force. Note the scale: it never exceeds $0.079$ anywhere on the slice, so even the
+most favorable posture returns under a twelfth of a push along that direction, and
+the pattern is a property of the geometry rather than of any one configuration.
+This is the effect that has been misread as blindness of the mechanism.
 (b) $\sigma_{\min}(\Jv)$, which bounds noise amplification for the point-contact
 inversion and is the quantity that actually limits it. The star marks the task
 configuration.}
@@ -1000,8 +988,8 @@ configuration.}
 
 The geometric reason the six-dimensional inversion fails in a particular direction
 is worth stating, because it explains why the effect is systematic on this class
-of arm. The three pitch joints are coplanar, so the torques they produce resist
-only loads in the plane of the arm. A force component normal to that plane reaches
+of arm. The three pitch axes are parallel, so the torques those joints produce
+resist only loads in the plane of the arm. A force component normal to that plane reaches
 the actuators through a single path, the moment it exerts about the base yaw axis.
 A moment applied directly about that same axis produces the identical joint torque
 with a smaller norm in $\R^6$, so the minimum-norm criterion prefers it. The
@@ -1053,24 +1041,26 @@ directions and all six poses. And the poses span $\sigma_{\min}(\Jv)$ from
 $0.0255$ to $0.0802$ without the six-dimensional error responding, confirming that
 its error is not a conditioning effect.
 
-\begin{figure*}[!t]
+\begin{figure}[!t]
 \centering
-\includegraphics[width=0.92\textwidth]{direction_sweep.png}
-\caption{Directional sweep over $12\,000$ push directions at six configurations.
-(a) Relative force error against alignment with the least observable direction:
-the six-dimensional error (red) is a linear function of alignment with correlation
-$0.9993$, while the point-contact error (blue) lies at zero. (b) Error
-distributions of the six-dimensional inversion at each pose, which coincide,
-showing the effect is a property of the architecture rather than of a posture.}
+\includegraphics[width=0.98\columnwidth]{direction_sweep.png}
+\caption{The slope of \eqref{eq:errlaw}, $1-\lambda_{\min}$, against the
+characteristic length, at the six configurations of the directional sweep. Each
+pose has its own slope at small $\lc$ and all six approach a common value as $\lc$
+grows, so at the unweighted-SI baseline they are nearly indistinguishable while at
+the scale of the arm they are not. This is what the pooled correlation of
+$0.9993$ measures and what it conceals. The direction that is lost is the same
+throughout, by Proposition~\ref{prop:arch}, and it is only the slope that moves.}
 \label{fig:dirsweep}
-\end{figure*}
+\end{figure}
 
-Fig.~\ref{fig:dirsweep} confirms the mechanism quantitatively. Pooling the
-$12\,000$ directions, the median six-dimensional error grows monotonically with
-alignment, from $9.8\,\%$ below $|\cos\theta|=0.2$ to $94.8\,\%$ above $0.95$, and
-the correlation between alignment and error is $0.9993$. The geometric explanation
-is therefore not an interpretation placed on the numbers after the fact: it
-accounts for essentially all of the variance.
+The pooled numbers confirm the mechanism quantitatively. Over the $12\,000$
+directions the median six-dimensional error grows monotonically with alignment,
+from $9.8\,\%$ below $|\cos\theta|=0.2$ to $94.8\,\%$ above $0.95$, and the
+correlation between alignment and error is $0.9993$. The geometric explanation is
+therefore not an interpretation placed on the numbers after the fact: it accounts
+for essentially all of the variance. Fig.~\ref{fig:dirsweep} shows what that
+pooled figure conceals, and the next remark states it.
 
 \begin{remark}[Scope of the correlation]
 The least observable direction is obtained from $\Pff$, that is from the same
