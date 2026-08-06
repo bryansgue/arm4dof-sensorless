@@ -1,7 +1,10 @@
 # Checklist de envío — IEEE Access
 
-Estado del PDF: **18 páginas, 12 tablas, 0 errores, 0 citas o referencias sin
+Estado del PDF: **17 páginas, 11 tablas, 0 errores, 0 citas o referencias sin
 resolver, `lint_prose.py` clean.**
+
+**Autoría propuesta: dos autores; ⛔ pendiente de confirmación escrita.** Ver el
+punto 1.
 
 ⚠️ La respuesta punto por punto a las DOS revisiones del asesor del 04/08/2026
 está en `RESPONSE.md`. Leer eso antes que esto.
@@ -19,14 +22,39 @@ ORCID se carga en el portal. Las fotos de biografía van en cámara lista.
 
 ## ⚠️ Lo que TENÉS que decidir vos antes de subir
 
-### 1. Afiliación — lo único que no puedo decidir
-✅ **Autoría única ya aplicada.** Se eliminaron las afiliaciones 2 y 3, el autor de
-correspondencia, el financiamiento (`\tfootnote`), el agradecimiento y las dos
-biografías heredadas del otro paper. Firma **Bryan S. Guevara**, solo.
+### 1. Autoría — ⛔ NO ENVIAR SIN CERRAR ESTO POR ESCRITO
 
-⛔ **Queda la afiliación.** Está en LASER/UFPB, que es la que corresponde al correo
-institucional, marcada con comentario en `main.tex:57`. Si la institución de origen
-es otra, cambiarla ahí.
+Estado actual del `.tex`: **dos autores**.
+
+| autor | afiliación |
+|---|---|
+| José Varela-Aldás (Senior Member, IEEE) | Centro de Investigación MIST, Universidad Tecnológica Indoamérica, Ambato 180103, Ecuador |
+| Angélica Quito | Faculty of Digital Engineering and Emerging Technologies, UIDE, Quito 170411, Ecuador |
+
+Corresponding: José. `\tfootnote` de financiamiento de Indoamérica repuesto.
+`\markboth` con el título de ESTE paper.
+
+⚠️ **Bryan S. Guevara NO figura**, y se eliminaron su afiliación LASER/UFPB y su
+biografía. Fue instrucción explícita suya.
+
+⚠️ **Cambiar el conjunto completo de autores después de una revisión técnica
+profunda es un riesgo de integridad editorial mayor que cualquier cosa de formato,
+y un comentario en el `.tex` que diga "confirmado" NO sustituye la confirmación
+entre las personas.** Antes de subir hace falta dejar registro, por correo o por
+escrito, de las cuatro cosas:
+
+- [ ] la **eliminación de Bryan S. Guevara** de la autoría es intencional y él la
+      conoce;
+- [ ] José y Angélica cumplen criterios reales de autoría **por sus contribuciones
+      a este trabajo**, no por afiliación ni financiamiento;
+- [ ] los autores aprobaron **manuscrito, orden, afiliaciones, financiación y
+      responsabilidad sobre los resultados**;
+- [ ] la **biografía de Angélica Quito** está entregada. Hoy el `.tex` dice
+      `biography pending.`: compila, pero no se envía así.
+
+⚠️ IEEE exige que cada autor cumpla los criterios de contribución sustancial,
+redacción o revisión crítica, y aprobación de la versión final. El portal lo
+pregunta al subir.
 
 ### 2. ORCID
 IEEE Access lo pide. Se carga en el portal, no en el `.tex`.
@@ -80,8 +108,9 @@ número de pasos de asentamiento, que no estaba fijado.
 | compilación | limpia, sin errores |
 | referencias | 33, todas citadas y resueltas |
 | figuras | 4, todas citadas |
-| tablas | 12, todas citadas (eran 16; ver `RESPONSE.md`) |
-| autoría | única, aplicada |
+| tablas | 11, todas citadas (eran 16; ver `RESPONSE.md`) |
+| carta de presentación | borrador en `COVER_LETTER.md`. ⛔ falta firmarla |
+| autoría | ⛔ **propuesta**, dos autores, sin confirmación escrita. NO enviable |
 | ortografía / gramática | `lint_prose.py` da `clean` |
 
 ⚠️ Los 2 avisos `Overfull \hbox (9.2679pt)` en `\maketitle` y los avisos de fuente

@@ -3,9 +3,11 @@
 Estimación de fuerza de contacto **sin sensor** y control compliant para un brazo
 4DOF de servos comerciales (Dynamixel MX-28R). Paper listo para IEEE Access.
 
-> **Entrada rápida:** el paper está en `paper/` (18 pág, compila limpio). Lo único
-> que bloquea el envío es confirmar la **afiliación**. Ver `paper/SUBMISSION.md`,
-> y `paper/RESPONSE.md` para la respuesta a la segunda revisión del asesor.
+> **Entrada rápida:** el paper está en `paper/` (17 pág, compila limpio) y el
+> asesor lo dio por **científicamente cerrado dentro de su alcance simulado**. Lo
+> que bloquea el envío es **la autoría, por escrito**, y la **biografía de Angélica
+> Quito**. Empezar por `paper/SUBMISSION.md`. La carta de presentación está en
+> `paper/COVER_LETTER.md` y `paper/RESPONSE.md` es el registro por ronda.
 
 ---
 
@@ -13,14 +15,36 @@ Estimación de fuerza de contacto **sin sensor** y control compliant para un bra
 
 | | |
 |---|---|
-| paper | `paper/main.tex`, **18 pág**, 12 tablas, IEEE Access, 0 errores, lint clean, **33 refs** |
-| bloqueo | **la afiliación** (decisión del autor). Autoría única ya aplicada. ORCID en el portal, fotos en cámara lista |
+| paper | `paper/main.tex`, **17 pág**, 11 tablas, IEEE Access, 0 errores, lint clean, **33 refs** |
+| bloqueo | **la autoría por escrito** y la **biografía de Angélica Quito**. ORCID en el portal, foto en cámara lista |
+| autoría | ⛔ **PROPUESTA, sin confirmación escrita**: Varela-Aldás (MIST/Indoamérica, Ambato) y Quito (UIDE, Quito). Corresponding: José. ⚠️ Guevara NO figura, y se borró LASER/UFPB con su biografía; fue instrucción explícita suya. El asesor lo vio y lo marcó como **riesgo de integridad editorial mayor que cualquier tema de formato** |
+| probabilidad | **50-60 %** sin S3 · **70-80 %** con S3 limpio y favorable, según el asesor |
 | hardware | **nada probado en el brazo real.** `hw/` listo, procedimientos validados |
-| rama | `master` (mergeado desde `sensorless-contact-model`), sin pushear |
+| rama | `paper-major-revision`, **árbol limpio**: los 11 archivos quedaron en dos commits, ver abajo. Nada pusheado, nada mergeado a `master` |
 
 ⚠️ **El paper declara que TODO es simulación**, en abstract, introducción, alcance
 y limitaciones. No suavizar eso: es el punto que un revisor va a atacar y la
 defensa es que está declarado.
+
+### Los DOS commits sobre `ecd11d6`, y por qué están separados
+
+| commit | qué lleva |
+|---|---|
+| `f4ebeba` **técnico** | las dos figuras rehechas y sus scripts, `tab:sweep` eliminada con sus números a prosa, la formulación de la Prop. 3 (paralelos, no coaxiales), y `paper/COVER_LETTER.md` |
+| **este**, autoría | `main.tex` (bloque de autores, biografías) más los cuatro documentos de estado: `SUBMISSION.md`, `README.md`, `RESPONSE.md`, `CLAUDE.md` |
+
+⚠️ **La separación no es cosmética.** La autoría **no está confirmada por escrito**,
+así que tiene que poder revertirse sola: `git revert` del segundo commit deja el
+manuscrito y su documentación coherentes, sin tocar nada técnico.
+
+⚠️ **El `main.tex` se partió por hunk, no por archivo** — es el único que lo
+necesitaba, porque es el manuscrito. Los cuatro documentos de estado fueron
+enteros al commit de autoría **a propósito**: sus párrafos de autoría no se pueden
+separar de los conteos de páginas sin inventar un texto intermedio que nunca
+existió, y así el revert los deja consistentes con el `.tex` revertido.
+
+El PDF se recompiló en los dos commits, para que en cada uno corresponda a su
+`.tex`. En `f4ebeba` todavía firma Guevara, que era el estado real de ese commit.
 
 ---
 
@@ -62,6 +86,19 @@ las juntas 2-4 sobre un eje horizontal común `a`:
 
 Los autovectores no dependen de `ℓ_c` **porque los tres ejes de pitch son
 paralelos**. Para un Jacobiano genérico es FALSO, y el paper lo dice.
+
+⚠️ **La formulación exacta importa, y hay DOS maneras de escribirla mal.** La
+correcta: *ejes de las juntas 2 a 4 **paralelos a una dirección horizontal común**
+`a`, con las rectas articulares distintas.*
+
+| formulación | por qué está mal |
+|---|---|
+| "ejes **coplanares**" | más débil que lo que se demuestra; no alcanza |
+| "**comparten** un eje común" | se lee **COAXIAL**, y las rectas son distintas |
+
+Lo que la demostración usa es que las columnas angulares de `Jw` comparten la
+DIRECCIÓN `a`, no que las rectas coincidan. Corregido en la Proposición 3, en la
+explicación geométrica y en la carta.
 
 ⚠️ La hipótesis `dim Jv(ker Jw)=2` **es** el espectro `{λ,1,1}`: coinciden en el
 100 % de las 2197 configuraciones, y ambas valen en el 92.3 %. El resto son las
@@ -257,6 +294,19 @@ de margen contra topes: sin él, la junta se apoya y el actuador no ve la carga
 mío imprimió *"son el mismo mapa"* cuando la diferencia era 1.31. Se detecta
 leyendo el número, no la conclusión.
 
+**Un mapa de calor con la escala mal elegida oculta el resultado entero.** El
+panel (a) de `observability_map.png` se dibujaba con `vmax=1` cuando `lam_min` no
+pasa de 0.079: el mapa completo caía en el 8 % inferior del colormap y salía
+negro, sin estructura visible. Escalar al dato y declarar el máximo en la etiqueta.
+
+**Una figura que confirma una identidad demostrada no dice nada.** `direction_sweep.png`
+mostraba 12000 puntos formando una recta —que es exactamente lo que la ec. del
+error obliga— y seis histogramas escalonados de 40-70 cuentas por bin, puro ruido
+visual. Reemplazada por: (a) una recta por pose, y (b) **la pendiente `1−λ_min`
+contra `ℓ_c`**, que es lo que explica de un vistazo por qué la correlación agrupada
+vale 0.9993 al baseline y 0.4475 a ℓ_c=0.05: las seis pendientes colapsan a la
+derecha y se abren en abanico a la izquierda.
+
 **Una métrica agregada puede estar sana con el resultado mal.** Correlación 0.997
 convivía con 2.227 N de error: mide forma, no ganancia.
 
@@ -402,7 +452,8 @@ hace momento sobre eje vertical. Necesita tiro horizontal.
 | archivo | qué tiene |
 |---|---|
 | **`CLAUDE.md`** | este archivo: estado, correcciones, trampas |
-| `paper/RESPONSE.md` | **respuesta a la revisión del asesor del 04/08/2026** |
+| `paper/RESPONSE.md` | respuesta a las revisiones del asesor. ⚠️ **REGISTRO HISTÓRICO POR RONDA**: los números de adentro pertenecen a la ronda en que se escribieron. El estado vigente está en su encabezado |
+| `paper/COVER_LETTER.md` | carta de presentación. Ataca la amenaza de rechazo por novedad, que el hardware NO resuelve |
 | `paper/SUBMISSION.md` | checklist de envío, auditoría de reproducibilidad, defensas |
 | `paper/README.md` | cómo compilar, de dónde sale cada número |
 | `hw/README.md` | plan de bring-up, auditoría del banco MuJoCo, poder de detección |
@@ -414,8 +465,40 @@ hace momento sobre eje vertical. Necesita tiro horizontal.
 
 ## Pendientes, en orden
 
-⛔ **LO ÚNICO QUE BLOQUEA EL ENVÍO HOY: la afiliación.** Quedó LASER/UFPB, marcada
-con comentario en `main.tex:57`. Es decisión del autor.
+⛔ **LO QUE BLOQUEA EL ENVÍO, en orden:**
+
+1. **La autoría, POR ESCRITO.** Checklist de cuatro puntos en `paper/SUBMISSION.md`.
+   Un comentario en el `.tex` NO es confirmación entre autores. El asesor lo marcó
+   como riesgo de integridad editorial **mayor que cualquier tema de formato**.
+2. **La biografía de Angélica Quito** — hoy `biography pending.`, compila igual.
+3. **El autor de correspondencia en la carta** — hoy `[autor de correspondencia]`.
+4. **ORCID** de los autores, en el portal.
+5. **Decidir si habrá paquete de reproducibilidad accesible.** Si no lo hay, sale
+   esa frase de la carta: no se suaviza, se saca.
+
+⚠️ **Y una decisión abierta que no es un bloqueo:** enviar la versión simulada ya, o
+esperar S3. Criterio del asesor, que es el bueno porque es condicional: **si S3 está
+a pocos días, esperar; si son semanas o hay incertidumbre, enviar y desarrollarlo en
+paralelo. Nunca enviar un S3 contaminado** — S0, piso de resolución y rejas pasan
+primero.
+
+⚠️ **Son DOS riesgos independientes, y se confunden todo el tiempo:**
+
+| riesgo | consecuencia | qué lo ataca |
+|---|---|---|
+| **novedad** — "cuantifica un hecho conocido" | rechazo editorial **temprano** | la carta de presentación y la Sec. I. **El hardware NO** |
+| **validez externa** — corriente, stiction y calibración solo modeladas | Major Revision | S3 |
+
+⚠️ **Angélica Quito es el NOMBRE de una persona, apellido Quito — no la ciudad.**
+Se confundió una vez. Su afiliación es UIDE, que sí está en Quito; la de José es
+Indoamérica en **Ambato**, no Quito.
+
+✅ El `\tfootnote` de financiamiento de Indoamérica quedó repuesto, y el
+`\corresp{}` apunta a José.
+
+⚠️ El bloque de autoría se copió del paper de quadrotors, así que **traía el
+`\markboth` con el título de ESE trabajo**. Corregido al de este. Revisar siempre
+el markboth cuando se hereda un bloque de autores.
 
 1. ✅ **Posicionamiento contra Magrini** reescrito (commit `68b104c`).
 2. ✅ **Jerarquía acordada aplicada** (C1 principal, C2 co-principal, NMPC
@@ -433,9 +516,10 @@ con comentario en `main.tex:57`. Es decisión del autor.
    (contacto puntual como default en hardware barato). Los tres primeros **leídos
    enteros**. ⚠️ De Wahrburg solo se leyó el título — se cita a ese nivel y nada
    más. Registro completo en `.claude/lit-review-2026-08.md`.
-5. ✅ **Autoría única** aplicada, y correcciones puntuales del asesor (abstract,
-   *under-actuated* → *low-DoF*, 0.99 N vs 0.264 N desambiguado). ⛔ Falta
-   **confirmar la afiliación**.
+5. ⛔ **Autoría: PROPUESTA de dos autores (Varela-Aldás, Quito), SIN confirmación
+   escrita.** La autoría única se revirtió el 04/08/2026 y Guevara quedó fuera por
+   instrucción explícita suya. Correcciones puntuales del asesor ya aplicadas
+   (abstract, *under-actuated* → *low-DoF*, 0.99 N vs 0.264 N desambiguado).
 6. ✅ **Sec. VII repetida con V0 en vez de T** — es `sec:res-model`, Tabla IX: el
    lazo compliant completo con controlador cinemático, estimador idéntico.
 7. Corpus de referencia en `paper_refs/src_corpus/` para el barrido léxico
@@ -443,19 +527,25 @@ con comentario en `main.tex:57`. Es decisión del autor.
 8. Conseguir el texto de `wahrburg2018motorcurrent` si alguna vez hace falta
    afirmar algo de su método. Hoy se cita al nivel del título.
 
-9. ✅ **Métrica del wrench** (04/08/2026): Sec. IV-C, Proposición 2, tabla de
-   sensibilidad, `metric_sensitivity.py`. ⚠️ El nominal ℓ_c = 1 m es decisión
-   abierta.
+9. ✅ **Métrica del wrench** (04/08/2026): Sec. IV-C, Proposiciones 2 y 3 con
+   demostración, tabla de sensibilidad, `metric_sensitivity.py`. El nominal
+   ℓ_c = 1 m quedó como *unweighted-SI baseline*, respaldado por el asesor.
 10. ✅ **`tab:regimes` ahora se reproduce** (`test_compliance_regimes.py`), y sus
-   números cambiaron. ⚠️ Confirmar con el asesor: se cambió una tabla de
-   resultados contra una reimplementación, porque el código original no existía.
+   números cambiaron dos veces: primero la transición (5-6 → 6-8 N), después el
+   estado estacionario (meseta 0.9 → 3.0 s). El asesor confirmó conservar la tabla
+   reproducible y eliminar la vieja.
+11. ✅ **Carta de presentación** (`paper/COVER_LETTER.md`). Existe porque la mayor
+   amenaza de rechazo es la percepción de novedad incremental, **y esa no la
+   resuelve el hardware**. ⛔ Falta firmarla y decidir si habrá paquete de
+   reproducibilidad accesible: la frase que lo menciona OBLIGA a entregarlo.
+12. ✅ **Dos figuras rehechas.** Ver "Trampas" más abajo.
 
 ⚠️ **Ya no queda material fácil de cortar.** Se sacaron la ablación de la métrica,
 "compliant vs rígido" (N=6), la nota de implementación en tiempo real, y en la
 ronda del 04/08/2026 cuatro tablas más (`timing`, `validation`, `threedirs`,
 `velocity`, sus números pasaron a prosa) y dos subsecciones del bloque del
-controlador. **16 → 12 tablas.** Aun así el material de la métrica cuesta ~2
-páginas netas y el PDF quedó en 17. Lo que queda sostiene C1 o C2: recortar más
+controlador, y despues `tab:sweep`. **16 → 11 tablas.** Aun así el material de la
+métrica cuesta ~2 páginas netas y el PDF quedó en 17. Lo que queda sostiene C1 o C2: recortar más
 cuesta evidencia, y los candidatos están listados en `paper/RESPONSE.md`.
 
 ⚠️ **La razón de costo V0 vs T tiene DOS valores y los dos son correctos:** ~27×

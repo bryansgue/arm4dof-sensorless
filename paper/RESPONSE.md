@@ -1,13 +1,34 @@
 # Respuesta a las revisiones del asesor — 04/08/2026
 
-Estado del PDF: **18 páginas, 12 tablas, 0 errores, 0 referencias sin resolver,
-`lint_prose.py` clean.**
+> ⚠️ **Este documento es un REGISTRO HISTÓRICO POR RONDA, no una descripción del
+> manuscrito actual.** Cada sección conserva el estado en que se escribió, incluidos
+> números y decisiones que rondas posteriores cambiaron. Está a propósito: lo que
+> documenta es cómo se resolvió cada objeción, y borrar los estados intermedios
+> haría ilegible el razonamiento. Cuando una sección quedó superada, hay un aviso
+> apuntando a la ronda que la corrige.
 
-- **Ronda 2** (primera Major Revision): secciones 1 a 5 de este documento.
-- **Ronda 3** (segunda pasada, con el código ejecutado): al final, en
-  **"Ronda 3"**. Los tres puntos que pediste cerrar están cerrados, y el primero
-  terminó **mejor** de lo que recomendabas: hay demostración analítica, así que no
-  hizo falta degradar la invariancia a observación empírica.
+## Estado ACTUAL del manuscrito, que es el que vale
+
+| | |
+|---|---|
+| PDF | **17 páginas, 11 tablas**, 4 figuras, 33 referencias |
+| compilación | 0 errores, 0 referencias sin resolver, `lint_prose.py` clean |
+| autoría | ⛔ **propuesta**: dos autores, **pendiente de confirmación escrita**. Ver `SUBMISSION.md` |
+| bloqueos | autoría por escrito · biografía de Angélica Quito · autor de correspondencia en la carta · ORCID |
+| carta de presentación | borrador en `COVER_LETTER.md` |
+
+⚠️ Cualquier número de páginas, tablas o autoría que aparezca MÁS ABAJO pertenece a
+la ronda en que se escribió y **no describe el estado de hoy**.
+
+## Índice de rondas
+
+- **Ronda 2** (primera Major Revision): secciones 1 a 5.
+- **Ronda 3** (con el código ejecutado): "Ronda 3". Los tres puntos pedidos quedaron
+  cerrados, y el primero terminó **mejor** de lo recomendado: hay demostración
+  analítica, así que no hizo falta degradar la invariancia a observación empírica.
+- **Ronda 4** (ajustes documentales): "Ronda 4".
+
+---
 
 Todo lo verificable de la revisión se comprobó contra el código antes de tocar el
 texto. **Los dos comentarios mayores y los siete menores eran correctos.** Abajo,
@@ -126,7 +147,7 @@ si el ensayo se contamina. Sigue sin correrse: **requiere el brazo montado.**
 | 5 | el 1e-10 da impresión contraproducente | ahora siempre acompañado de qué prueba y qué no |
 | 6 | demasiadas tablas | **16 → 12**. Eliminadas: `timing`, `validation`, `threedirs`, `velocity` (sus números pasaron a prosa, sin perder evidencia). Eliminadas también las subsecciones *Real-time implementation* (queda como remark) y *Tracking, regulation and computation* (queda en 4 líneas). El bloque del controlador es ahora lo mínimo que sostiene la contribución 2 |
 | 7 | README y checklist desactualizados (9 y 14 páginas) | sincronizados |
-| 8 | la doc de envío habla de tres autores | corregido: el manuscrito ya tenía autoría única; `SUBMISSION.md` ahora también |
+| 8 | la doc de envío habla de tres autores | corregido en esa ronda: el manuscrito tenía autoría única y `SUBMISSION.md` se sincronizó. ⚠️ **Superado**: la autoría cambió después, ver el encabezado |
 
 ---
 
@@ -260,7 +281,7 @@ invariancia es una propiedad de esta arquitectura, demostrada, no una regla
 general.
 
 **En el paper:** Proposición 2 (conjunto recuperado, general), Proposición 3
-(estructura direccional, arquitectura yaw + pitch coplanares), corolario del error,
+(estructura direccional, arquitectura yaw + ejes de pitch PARALELOS), corolario del error,
 y el párrafo que dice qué NO se generaliza. Verificación numérica en la sección G
 de `metric_sensitivity.py`.
 
@@ -389,7 +410,9 @@ Sobre el aviso en sí:
   conservando numpy. **Preferible el segundo**, porque no toca la versión de numpy
   con la que se produjeron todos los números.
 
-## Estado
+## Estado al cerrar esa ronda
 
-**18 páginas, 12 tablas, 0 errores, lint clean.** No recorté, siguiendo tu
-criterio. Quedan la afiliación y S3.
+18 páginas, 12 tablas, 0 errores, lint clean. No recorté, siguiendo tu criterio.
+
+⚠️ Superado: rondas posteriores eliminaron `tab:sweep`, rehicieron las dos figuras
+y cambiaron la autoría. El estado vigente está en el encabezado de este documento.

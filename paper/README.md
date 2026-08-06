@@ -3,12 +3,15 @@
 **Sensorless Contact-Force Estimation on Low-DoF, Velocity-Actuated Manipulators:
 A Quantitative Design Framework**
 
-18 páginas, 12 tablas, 4 figuras, 33 referencias. Autoría única. Formato
+17 páginas, 11 tablas, 4 figuras, 33 referencias. Autoría propuesta: dos autores,
+⛔ sin confirmación escrita. Formato
 `ieeeaccess.cls` tomado de `~/python/Time_optimal_planing-NMPC/ACCESS_latex`
 (solo el formato; nada de contenido de ahí).
 
-> **Respuesta punto por punto a la revisión del asesor (04/08/2026): `RESPONSE.md`.**
-> **Checklist de envío: `SUBMISSION.md`.**
+> **Respuesta punto por punto a las revisiones del asesor: `RESPONSE.md`.**
+> **Checklist de envío: `SUBMISSION.md`.** ⛔ Ahí está el bloqueo de autoría.
+> **Carta de presentación: `COVER_LETTER.md`.** Ataca la mayor amenaza de rechazo,
+> que es la percepción de novedad incremental, y esa no la resuelve el hardware.
 
 ## Compilar
 
@@ -53,7 +56,8 @@ afirmaban que el brazo tenía una dirección de fuerza ciega. Ver
 
 ## Antes de enviar
 
-1. ⛔ **La afiliación** — único bloqueo. LASER/UFPB, comentario en `main.tex:57`.
+1. ⛔ **La biografía de Angélica Quito** — hoy dice `biography pending.`, compila
+   pero no se puede enviar así. Y falta definir el **autor de correspondencia**.
 2. **ORCID**: se carga en el portal, no en el `.tex`.
 3. **Biografía con foto**: hoy `IEEEbiographynophoto`, que compila. La foto va en
    cámara lista.
@@ -74,7 +78,6 @@ Nada escrito a mano.
 |---|---|---|
 | `tab:gap` | comparación con el trabajo previo | literatura, sin script |
 | `tab:metric` | **sensibilidad a ℓ_c**, la métrica del wrench | `metric_sensitivity.py` |
-| `tab:sweep` | barrido de 2197 configs, rank y condicionamiento | `observability_map.py` |
 | `tab:dirsweep` | 12000 direcciones de empuje, seis poses | `test_direction_sweep.py` |
 | `tab:regimes` | los dos regímenes de compliance | `test_compliance_regimes.py` ⚠️ |
 | `tab:formulations` | T vs V1 vs V0 | `test_vel_vs_torque.py` |
@@ -88,10 +91,16 @@ Nada escrito a mano.
 ⚠️ `tab:regimes` NO se reproducía con ningún script guardado hasta el
 04/08/2026, y al escribirlo los números cambiaron. Ver `RESPONSE.md`.
 
-Números en prosa que antes eran tabla (se comprimió el bloque del controlador):
+Números en prosa que antes eran tabla: el barrido de 2197 configuraciones —rank,
+`sigma_min`, `cond`, error de los dos estimadores— (`observability_map.py`),
 validación del modelo vs MuJoCo (`arm_dynamics.py`, `arm_kinematics.py`), reparto
 del residuo por `kv` y timing grafo-vs-escalar (`timing_test.c`), y las tres
 direcciones con nombre (`reproduce_paper_tables.py`).
+
+⚠️ **La figura del mapa de observabilidad NO se dibuja con `vmax=1`.** `lam_min` no
+pasa de 0.079 en toda la rebanada, así que con la escala 0-1 el panel (a) entero
+cae en el 8 % inferior del colormap y sale **negro**, sin estructura. Va escalada
+al dato, con el máximo declarado en la etiqueta de la barra de color.
 
 Validación contra MuJoCo (2.227 → 0.157 N): `mj_wrench_test.c`. Tests en C:
 preparar la escena primero con `hw/mj_arm.ensure_scene()`.
