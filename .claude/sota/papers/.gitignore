@@ -1,4 +1,4 @@
 # Los PDF del SOTA no se versionan: son papers con copyright y pesan.
-# Se dejan aca a mano; el corpus lexico se arma solo con lo que haya.
+# Se dejan aca a mano en cada clon; el corpus lexico se arma con lo que haya.
 *.pdf
 .extracted/
