@@ -4,7 +4,6 @@ Draft: `paper/main.tex`
 Venue: **IEEE Access** (no es RA-L: sin límite de 6-8 páginas, sin doble anonimato
 obligatorio). Las reglas duras de RA-L de la skill NO aplican; sí aplican el rubro
 de revisor (C), la higiene de claims (F) y el pase de vocabulario (H).
-Corpus: paper_refs/src_corpus   # ⛔ VACIO todavia: ver "Pendiente" abajo. Hoy el barrido H.1 NO corre.
 
 ## SOTA (must-cite + delta)
 
