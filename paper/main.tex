@@ -401,28 +401,28 @@ scheme~\cite{diehl2005rti} and by embedded solver
 frameworks~\cite{verschueren2022acados,andersson2019casadi,frison2020hpipm}.
 
 \subsection{What is already established}
-Several ingredients of this framework exist individually, and the contribution
-should not be read as larger than it is. That
-$\Jfull^{\!\top}\bm F=\tauext$ requires $n\ge6$, and that restricting the unknown
-to a force at a known contact point reduces the task dimension to three, are both
-stated in~\cite{magrini2014virtual}. That a posture can leave a task-space
-direction unobserved by joint torque sensing, and that this can be measured by a
-per-configuration index, is established in~\cite{wong2024sensorobs}. That Jacobian
-conditioning governs the accuracy of the reconstruction and can be used to select
-postures is established in~\cite{lu2023configopt}. Motor current has been used in
-place of joint torque sensing~\cite{wahrburg2018motorcurrent}, and the
-point-contact reduction is already the practical default on low-cost
-arms~\cite{yen2019virtual}.
+Several ingredients of this framework are established individually, and the
+contribution should not be read as larger than it is. That recovering a full
+wrench from the joint-torque residual requires at least six joints, and that
+restricting the unknown to a force at a known contact point reduces the task
+dimension to three, are both stated in~\cite{magrini2014virtual}. That a posture
+can leave a task-space direction unobserved by joint torque sensing, and that this
+can be measured by a per-configuration index, is established
+in~\cite{wong2024sensorobs}. That Jacobian conditioning governs the accuracy of
+the reconstruction and can be used to select postures is demonstrated
+in~\cite{lu2023configopt}. Motor current has been used in place of joint torque
+sensing~\cite{wahrburg2018motorcurrent}, and the point-contact reduction is
+already the practical default on low-cost arms~\cite{yen2019virtual}.
 
-None of them reports how much of an applied force the six-dimensional inversion
-discards, in which directions, and how often across a workspace. Nor that this
-quantity is not scale-free, nor which part of it is. Nor that the loss is silent
-under a conventional validation. And none addresses the velocity-actuated regime.
-The $50.5\,\%$ figure is likewise not a general result: it belongs to this arm,
-this workspace, and one choice of the length that renders the wrench norm
-homogeneous. It carries weight because $\Pff$ explains and predicts it, and
-because the same construction can be evaluated for any other arm before one is
-built.
+What none of them reports is how much of an applied force the six-dimensional
+inversion discards, in which directions, and how often across a workspace; that
+this quantity is not scale-free, and which part of it is; that the loss is silent
+under a conventional validation; or the velocity-actuated regime. The $50.5\,\%$
+figure is likewise not a general result: it belongs to this arm, this workspace,
+and one choice of the length that renders the wrench norm homogeneous. It carries
+weight because the analysis of Section~\ref{sec:estimation} explains and predicts
+it, and because the same construction can be evaluated for any other arm before
+one is built.
 
 % =========================================================================
 \section{System Description and Modeling}
@@ -790,7 +790,7 @@ from $12.8\,\%$ to $51.4\,\%$ across a plausible range of $\lc$, and the count o
 configurations with a nearly unobservable direction moves from $6\,\%$ to
 $100\,\%$,
 which is the most metric-sensitive statistic in this paper and is reported
-here rather than headlined. What does not move is the worst case, $99.6\,\%$ for
+here rather than quoted as a headline figure. What does not move is the worst case, $99.6\,\%$ for
 every $\lc\ge0.15$~m, and the identity of the direction in which it occurs.
 
 Unless stated otherwise the remainder of the paper uses $\lc=1$~m, referred to
@@ -930,7 +930,7 @@ as a law on the simulated plant in Section~\ref{sec:res-cond}.
 \subsection{Workspace characterization}
 \label{sec:sweep}
 We sweep the three pitch joints over their full ranges on a $13^3$ grid, fixing
-the base yaw since it only rotates the picture in the world frame and leaves every
+the base yaw since it only rotates the configuration in the world frame and leaves every
 quantity of interest invariant. This gives $2197$ configurations, at each of which
 we compute the rank and singular values of $\Jv$ and apply a random unit contact
 force, recording the error of both estimators. Fig.~\ref{fig:map} maps the
@@ -1469,7 +1469,7 @@ at $0.997$ while carrying the $2.227$~N error. That correlation measures
 association rather than agreement, and is insensitive to gain and offset, is a
 long-standing point in measurement comparison~\cite{bland1986agreement}; what the
 experiment adds is that the failure mode is reached here by the estimator's own
-structure rather than by noise, so a validation of this kind can appear healthy
+structure rather than by noise, so a validation of this kind can appear sound
 while the quantity of interest is substantially wrong.
 \end{remark}
 
