@@ -177,11 +177,13 @@ limitation: the same push produces $1.2867\,\mathrm{N}\cdot\mathrm{m}$ at the ba
 joint, so the information is present in the measurement and the estimator discards
 it.
 
-The failure is also silent. Section~\ref{sec:res-estimation} reports a compliant loop in
-which the six-dimensional estimate tracks the true force at correlation $0.997$
-while carrying a $2.227$~N error, because correlation measures shape and the
-misattribution is a gain error. A validation that would ordinarily be accepted
-therefore certifies an estimator that is wrong by a factor of six.
+The failure is also silent. Section~\ref{sec:res-estimation} reports a compliant
+loop in which a push normal to the plane of the arm returns $83.4\,\%$ error, wrong
+by a factor of six. In the independent-engine check of
+Section~\ref{sec:res-mujoco} the same inversion tracks the true force at
+correlation $0.997$ while carrying a $2.227$~N error, because correlation measures
+shape and the misattribution is a gain error. A validation that would ordinarily
+be accepted therefore certifies an estimator wrong by a factor of four.
 
 \subsection{The actuator takes velocity, not torque}
 The second half of the design question is the actuator. Smart servos of this class
@@ -245,7 +247,7 @@ directions at six configurations, the loss is a linear function of the alignment
 with the least observable eigendirection, exactly so within each posture and at
 correlation $0.9993$ over all $12\,000$ directions pooled. The analysis separates
 what is a property of the arm from what is a property of an undeclared unit
-convention. The minimum-norm criterion sums newtons and newton-metres, so it
+convention. The minimum-norm criterion sums newtons and newton-meters, so it
 presupposes a length; we parameterize it, show that the least observable direction
 and the set of exactly recovered forces are invariant to that length while the
 magnitude of the loss is not, and report the sensitivity. The workspace sweep then
@@ -653,12 +655,12 @@ made explicit, because it sets the scale of every number that follows.
 The minimum-norm criterion behind \eqref{eq:sixinv} minimizes
 $\norm{\bm F}^2=\norm{\bm f}^2+\norm{\bm m}^2$ over the solution set. That sum is
 not dimensionally homogeneous: $\bm f$ is in newtons and $\bm m$ in
-newton-metres. Adding their squares presupposes a length. The unweighted
+newton-meters. Adding their squares presupposes a length. The unweighted
 pseudoinverse of $\Jfull$ expressed in SI units, which is what the standard
-residual observer computes, therefore fixes that length at one metre without
-saying so. Equivalently, the top three rows of $\Jfull$ carry units of metres and
+residual observer computes, therefore fixes that length at one meter without
+saying so. Equivalently, the top three rows of $\Jfull$ carry units of meters and
 the bottom three are dimensionless, so $\mathrm{col}\,\Jfull$, and with it
-$\Pobs$, changes if lengths are expressed in millimetres instead.
+$\Pobs$, changes if lengths are expressed in millimeters instead.
 
 We make the choice a parameter. For a characteristic length $\lc>0$, let
 \begin{equation}
@@ -684,7 +686,7 @@ another point changes $\bm m$ by $\bm r\times\bm f$ and therefore changes $\Mlc$
 And $\lc$ is a property of the arm, not of the contact: over the workspace sweep
 of Section~\ref{sec:sweep} the end-effector distance from the base has mean
 $0.233$~m and maximum $0.365$~m, so the arm's own scale is roughly $0.2$~m, an
-order of magnitude below the metre that the unweighted convention imposes.
+order of magnitude below the meter that the unweighted convention imposes.
 
 Two structural facts organize what follows. Writing $\bm S_{\lc}=\Wlc^{-1}$, the
 minimizer of $\norm{\bm F}_{\lc}$ subject to $\Jfull^{\!\top}\bm F=\tauext$ is
@@ -720,7 +722,7 @@ force block is then $\Jv\bm x$.
 
 The recovered set therefore consists of the forces produced by joint motions that
 generate no rotation, which is a statement about the mechanism and not about how
-newton-metres were scaled against newtons.
+newton-meters were scaled against newtons.
 
 For the directional structure, invariance is \emph{not} a general property of
 $\Mlc$: for an arbitrary Jacobian the eigenvectors do move with $\lc$. It holds
@@ -1172,7 +1174,7 @@ direction and higher in others.} The servo resists, the arm barely moves,
 and compliance is synthetic. Loop latency governs how the interaction feels.
 \item \emph{Above that threshold.} The actuator saturates and the arm is displaced
 until it reaches a posture where it can hold the load. Compliance is physical and
-obtained for free.
+requires no control effort.
 \end{itemize}
 
 The transition between the two is not a matter of interpretation. It has a
@@ -1211,7 +1213,7 @@ The two indicators change together. Below the transition the arm follows the
 commanded displacement to within a constant factor of $1.32$ to $1.38$ and the
 actuator never saturates; above it the ratio rises to $2.42$ and $2.88$ and the
 actuator is saturated for $97$ to $100\,\%$ of the push. The transition falls
-between $6$ and $8$~N, which is where it should: the static force this posture can
+between $6$ and $8$~N, which is where it should fall: the static force this posture can
 exert in this direction is $6.53$~N, computed independently from
 $\tau_{\max}$ and the gravity load. The workspace figures quoted above, median
 $5.88$~N and fifth percentile $4.29$~N, are taken over the worst direction at each
@@ -1471,6 +1473,7 @@ $0.20\,\mathrm{N}\cdot\mathrm{m}$ per newton applied. The point-contact inversio
 returns $100.0\,\%$ in every one of those twelve cases.
 
 \subsection{Validation against an independent engine}
+\label{sec:res-mujoco}
 Replacing the analytic plant with MuJoCo and applying a known external force gives
 a check that does not share the implementation of the dynamics. At the push peak
 the applied force is $[0.00,\ 4.00,\ -1.50]$~N; the six-dimensional inversion
@@ -1607,8 +1610,7 @@ experimentally, and monitoring $\sigma_{\min}(\Jv)$ online becomes an actionable
 recommendation with a measured benefit.
 
 The benefit is not free, and the second column states its price. The threshold
-that halves the tail accepts only $31.4\,\%$ of the workspace, so an arm
-restricted to it forfeits two thirds of its reachable postures; at
+that halves the tail accepts only $31.4\,\%$ of the workspace; at
 $\sigma_{\min}(\Jv)=0.04$ the arm keeps $68.7\,\%$ of the workspace and still
 gains a third of the tail reduction. Which point on that trade-off is right
 depends on the task, and reporting the error percentile without the retained
@@ -1868,7 +1870,7 @@ with the least observable direction, exactly so at each posture and at correlati
 $0.9993$ pooled over $12\,000$ directions, and over $2197$ configurations it
 discards $50.5\,\%$ of an applied unit force on average and up to $99.6\,\%$. Two
 of those three statements are properties of the arm alone. The third is not: the
-minimum-norm criterion adds newtons to newton-metres and therefore presupposes a
+minimum-norm criterion adds newtons to newton-meters and therefore presupposes a
 length, so the magnitude of the loss is reported here against that length, falling
 to $38.0\,\%$ at the arm's own scale, while the directions in which the loss
 occurs and the set of exactly recovered forces are invariant to it. That the
@@ -1878,7 +1880,7 @@ silent, coexisting
 with a $0.997$ correlation against ground truth, so a validation of the usual kind
 does not detect it. In the noise-free model the point-contact inversion recovers
 the force whenever $\mathrm{rank}\,\Jv=3$, which holds throughout the sampled
-workspace, which leaves numerical conditioning as the binding limitation and makes
+workspace; this leaves numerical conditioning as the binding limitation and makes
 $\sigma_{\min}(\Jv)$ the quantity to monitor. Against an independently written
 dynamic implementation the correction improves force RMSE by a factor of fourteen.
 
@@ -1891,11 +1893,11 @@ throughout the compliant loop at one twenty-fifth of the cost, which confines th
 dynamic model to the estimator. Under realistic servo quantization and stiction
 the corrected estimator attains $18.0\,\%$ median relative error against
 $69.6\,\%$, and gating on $\sigma_{\min}(\Jv)$ halves its tail, at the cost of
-rejecting two thirds of the workspace, while leaving the
+$69\,\%$ of the workspace, while leaving the
 six-dimensional error untouched, separating amplified noise from structural
 misattribution. Finally, because the actuator saturates below the force range of
-manual guidance, physical compliance is obtained for free and the synthetic loop
-need only cover fine guidance and the return to task.
+manual guidance, physical compliance requires no control effort and the synthetic
+loop need only cover fine guidance and the return to task.
 
 Two lines follow. The first is the hardware experiment of
 Section~\ref{sec:protocol}, which tests the directional prediction, the
@@ -1915,7 +1917,7 @@ preserving the dimensional argument that makes the approach work.
 %    keepaspectratio]{Fig/<nombre>.png}}]{Nombre}
 %    No hay fotos en el repositorio, por eso van sin foto: asi compila.
 \begin{IEEEbiographynophoto}{Jos\'e Varela-Ald\'as}
-(M'22--SM'24, IEEE) is an Industrial Engineer from the Universidad T\'ecnica de
+is an Industrial Engineer from the Universidad T\'ecnica de
 Ambato, holds a master's degree in Control Systems from the Escuela Superior
 Polit\'ecnica de Chimborazo, and a Ph.D. in Electronic Engineering from the
 University of Zaragoza. He is currently an Associate Professor at Universidad

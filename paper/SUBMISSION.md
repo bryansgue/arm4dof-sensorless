@@ -1,6 +1,6 @@
 # Checklist de envío — IEEE Access
 
-Estado del PDF: **17 páginas, 11 tablas, 0 errores, 0 citas o referencias sin
+Estado del PDF: **18 páginas, 11 tablas, 0 errores, 0 citas o referencias sin
 resolver, `lint_prose.py` clean.**
 
 **Autoría propuesta: dos autores; ⛔ pendiente de confirmación escrita.** Ver el

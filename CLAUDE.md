@@ -3,7 +3,7 @@
 Estimación de fuerza de contacto **sin sensor** y control compliant para un brazo
 4DOF de servos comerciales (Dynamixel MX-28R). Paper listo para IEEE Access.
 
-> **Entrada rápida:** el paper está en `paper/` (17 pág, compila limpio) y el
+> **Entrada rápida:** el paper está en `paper/` (18 pág, compila limpio) y el
 > asesor lo dio por **científicamente cerrado dentro de su alcance simulado**. Lo
 > que bloquea el envío es **la autoría, por escrito**, y la **biografía de Angélica
 > Quito**. Empezar por `paper/SUBMISSION.md`. La carta de presentación está en
@@ -15,7 +15,7 @@ Estimación de fuerza de contacto **sin sensor** y control compliant para un bra
 
 | | |
 |---|---|
-| paper | `paper/main.tex`, **17 pág**, 11 tablas, IEEE Access, 0 errores, lint clean, **33 refs** |
+| paper | `paper/main.tex`, **18 pág**, 11 tablas, IEEE Access, 0 errores, lint clean, **33 refs** |
 | bloqueo | **la autoría por escrito** y la **biografía de Angélica Quito**. ORCID en el portal, foto en cámara lista |
 | autoría | ⛔ **PROPUESTA, sin confirmación escrita**: Varela-Aldás (MIST/Indoamérica, Ambato) y Quito (UIDE, Quito). Corresponding: José. ⚠️ Guevara NO figura, y se borró LASER/UFPB con su biografía; fue instrucción explícita suya. El asesor lo vio y lo marcó como **riesgo de integridad editorial mayor que cualquier tema de formato** |
 | probabilidad | **50-60 %** sin S3 · **70-80 %** con S3 limpio y favorable, según el asesor |
@@ -289,6 +289,13 @@ de margen contra topes: sin él, la junta se apoya y el actuador no ve la carga
 
 ## 🪤 Trampas que picaron dos veces
 
+**`lint_prose.py` dando `clean` NO significa que la ortografía esté bien.** Su
+lista de raíces británicas cubre `-ise/-ised/-isation`, no los sustantivos en
+`-re`: ocho `metres`/`millimetres`/`newton-metres` pasaron limpias por el linter y
+por dos revisiones. Y el **barrido léxico H.1 nunca corrió**, porque
+`paper_refs/src_corpus/` no existe — o sea que la jerga solo la cubre el ledger
+escrito a mano. Un término acuñado que no esté ya en el ledger no lo ve nadie.
+
 **La línea que imprime el veredicto debe depender del dato.** Pasó dos veces:
 `test_e4_compare.py` imprimía *"E4: confirmado — empate"* hardcodeado, y un test
 mío imprimió *"son el mismo mapa"* cuando la diferencia era 1.31. Se detecta
@@ -545,8 +552,15 @@ el markboth cuando se hereda un bloque de autores.
 ronda del 04/08/2026 cuatro tablas más (`timing`, `validation`, `threedirs`,
 `velocity`, sus números pasaron a prosa) y dos subsecciones del bloque del
 controlador, y despues `tab:sweep`. **16 → 11 tablas.** Aun así el material de la
-métrica cuesta ~2 páginas netas y el PDF quedó en 17. Lo que queda sostiene C1 o C2: recortar más
+métrica cuesta ~2 páginas netas y el PDF quedó en 18. Lo que queda sostiene C1 o C2: recortar más
 cuesta evidencia, y los candidatos están listados en `paper/RESPONSE.md`.
+
+⚠️ **Y recortar PROSA no mueve el salto de página.** El documento está saturado de
+flotantes (4 figuras + 11 tablas), así que el reflujo de figuras y tablas absorbe
+cualquier ahorro de texto. Medido: partir una frase de la introducción llevó el
+PDF de 17 a 18 páginas, y comprimir esa misma frase **no** lo devolvió. Bajar de
+página exige sacar un **flotante o una referencia**. Access no tiene tope, así que
+hoy no hace falta.
 
 ⚠️ **La razón de costo V0 vs T tiene DOS valores y los dos son correctos:** ~27×
 en el test de regulación (Tabla IV) y **25×** en el lazo compliant completo

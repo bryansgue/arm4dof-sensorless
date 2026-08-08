@@ -7,6 +7,15 @@ phantom moment => spurious moment
 sideways push => out-of-plane push
 knee => transition
 lab manual => protocol
+for free => requires no control effort
+
+# ortografia americana: el motor del linter solo cubre -ise/-ised/-isation,
+# no los sustantivos en -re. Ocho de estas pasaron limpias por dos revisiones.
+newton-metre => newton-meter
+newton-metres => newton-meters
+metres => meters
+millimetres => millimeters
+centimetres => centimeters
 
 [soft]
 recipe
