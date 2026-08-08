@@ -3,7 +3,7 @@
 **Sensorless Contact-Force Estimation on Low-DoF, Velocity-Actuated Manipulators:
 A Quantitative Design Framework**
 
-18 páginas, 11 tablas, 4 figuras, 33 referencias. Autoría propuesta: dos autores,
+17 páginas, 11 tablas, 4 figuras, 33 referencias. Autoría propuesta: dos autores,
 ⛔ sin confirmación escrita. Formato
 `ieeeaccess.cls` tomado de `~/python/Time_optimal_planing-NMPC/ACCESS_latex`
 (solo el formato; nada de contenido de ahí).

@@ -11,7 +11,7 @@
 
 | | |
 |---|---|
-| PDF | **18 páginas, 11 tablas**, 4 figuras, 33 referencias |
+| PDF | **17 páginas, 11 tablas**, 4 figuras, 33 referencias |
 | compilación | 0 errores, 0 referencias sin resolver, `lint_prose.py` clean |
 | autoría | ⛔ **propuesta**: dos autores, **pendiente de confirmación escrita**. Ver `SUBMISSION.md` |
 | bloqueos | autoría por escrito · biografía de Angélica Quito · autor de correspondencia en la carta · ORCID |

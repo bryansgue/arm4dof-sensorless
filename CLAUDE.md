@@ -3,7 +3,7 @@
 Estimación de fuerza de contacto **sin sensor** y control compliant para un brazo
 4DOF de servos comerciales (Dynamixel MX-28R). Paper listo para IEEE Access.
 
-> **Entrada rápida:** el paper está en `paper/` (18 pág, compila limpio) y el
+> **Entrada rápida:** el paper está en `paper/` (17 pág, compila limpio) y el
 > asesor lo dio por **científicamente cerrado dentro de su alcance simulado**. Lo
 > que bloquea el envío es **la autoría, por escrito**, y la **biografía de Angélica
 > Quito**. Empezar por `paper/SUBMISSION.md`. La carta de presentación está en
@@ -15,7 +15,7 @@ Estimación de fuerza de contacto **sin sensor** y control compliant para un bra
 
 | | |
 |---|---|
-| paper | `paper/main.tex`, **18 pág**, 11 tablas, IEEE Access, 0 errores, lint clean, **33 refs** |
+| paper | `paper/main.tex`, **17 pág**, 11 tablas, IEEE Access, 0 errores, lint clean, **33 refs** |
 | bloqueo | **la autoría por escrito** y la **biografía de Angélica Quito**. ORCID en el portal, foto en cámara lista |
 | autoría | ⛔ **PROPUESTA, sin confirmación escrita**: Varela-Aldás (MIST/Indoamérica, Ambato) y Quito (UIDE, Quito). Corresponding: José. ⚠️ Guevara NO figura, y se borró LASER/UFPB con su biografía; fue instrucción explícita suya. El asesor lo vio y lo marcó como **riesgo de integridad editorial mayor que cualquier tema de formato** |
 | probabilidad | **50-60 %** sin S3 · **70-80 %** con S3 limpio y favorable, según el asesor |
@@ -552,15 +552,42 @@ el markboth cuando se hereda un bloque de autores.
 ronda del 04/08/2026 cuatro tablas más (`timing`, `validation`, `threedirs`,
 `velocity`, sus números pasaron a prosa) y dos subsecciones del bloque del
 controlador, y despues `tab:sweep`. **16 → 11 tablas.** Aun así el material de la
-métrica cuesta ~2 páginas netas y el PDF quedó en 18. Lo que queda sostiene C1 o C2: recortar más
+métrica cuesta ~2 páginas netas y el PDF quedó en 17. Lo que queda sostiene C1 o C2: recortar más
 cuesta evidencia, y los candidatos están listados en `paper/RESPONSE.md`.
 
-⚠️ **Y recortar PROSA no mueve el salto de página.** El documento está saturado de
-flotantes (4 figuras + 11 tablas), así que el reflujo de figuras y tablas absorbe
-cualquier ahorro de texto. Medido: partir una frase de la introducción llevó el
-PDF de 17 a 18 páginas, y comprimir esa misma frase **no** lo devolvió. Bajar de
-página exige sacar un **flotante o una referencia**. Access no tiene tope, así que
-hoy no hace falta.
+⚠️ **Un recorte CHICO de prosa no mueve el salto de página; uno grande sí.** El
+documento está saturado de flotantes (4 figuras + 11 tablas) y el reflujo los
+absorbe. Medido el 07/08/2026: partir una frase de la introducción subió el PDF a
+18 y **reescribir esa misma frase más corta no lo bajó**; comprimir Contribuciones
+de ~450 a ~220 palabras **sí** lo devolvió a 17. El umbral está en el orden de las
+centenas de palabras, no en las decenas.
+
+## ✍️ EL REGISTRO DE PROSA: el paper de racing es la guía
+
+`mpcc_controller/paper/Overleaf/paper_ral_submit.tex`. Instrucción explícita del
+usuario (07/08/2026): las contribuciones estaban **infladas**. Lo que hay que
+copiar de ese paper:
+
+```
+bullets      2-3, de ~60 palabras. UNA frase de apertura por bullet y listo
+verbos       "We characterize", "We present". NO "The governing object is",
+             NO "The claim is the whole chain"
+numeros      UNO por bullet, el titular. El resto vive en el cuerpo
+cierre       "To close this gap, this paper makes the following N contributions:"
+```
+
+⚠️ **El material de honestidad NO se borra, se MUEVE.** Lo que el asesor exigió
+—qué es previo, qué no generaliza el 50.5 %— pasó a `\subsection{What is already
+established}` al final de Related Work. Ahí cumple la misma función sin diluir las
+contribuciones, y la carta de presentación lo sigue teniendo de dónde colgar.
+
+⚠️ **El mismo tratamiento le falta a la conclusión y al abstract**, que siguen con
+el registro viejo: la conclusión del racing son ~150 palabras y la de este paper
+~450, con ocho números.
+
+⚠️ Y ahí mismo, `mpcc_controller/paper/ref_corpus/` (dqnmpc, microlie, quatkin,
+romero) **es el corpus que falta** para el barrido léxico H.1 de `lint_prose.py
+--sweep`. Cierra el pendiente 7 sin descargar nada.
 
 ⚠️ **La razón de costo V0 vs T tiene DOS valores y los dos son correctos:** ~27×
 en el test de regulación (Tabla IV) y **25×** en el lazo compliant completo
