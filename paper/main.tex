@@ -80,32 +80,21 @@ Compliant physical interaction on low-cost manipulators must work without a
 force/torque sensor, whose price exceeds that of the arm, and with servos
 commanded in velocity rather than torque. That a residual observer cannot resolve
 a full wrench from fewer than six joints, and that a point-contact model reduces
-the unknown to three dimensions, is established. It does not say how much force
-is lost, in which directions, or at which postures. This paper supplies that
-quantification. The force block of the wrench projector predicts the directional
-structure of the error: the loss is a linear function of the alignment with the
-least observable direction, exactly so at each posture and at correlation
-$0.9993$ over $12\,000$ push directions pooled across six.
-The magnitude of that loss is shown to depend on the characteristic length that
-makes the wrench norm dimensionally homogeneous, a choice the unweighted
-pseudoinverse makes silently; the directions lost do not. Over $2197$
-configurations of a 4-DoF arm the six-dimensional inversion discards $50.5\,\%$ of
-an applied unit force on average under the unweighted convention in standard use,
-$38.0\,\%$ under the arm's own scale, and up to $99.6\,\%$ under either, while
-still correlating with ground truth at $0.997$, so a validation that looks
-convincing can hide a large gain error. The point-contact inversion admits no such
-choice of metric.
-Rejecting postures below $\sigma_{\min}(\bm J_{\!v})=0.06$ halves the
-ninetieth-percentile error of the point-contact estimator at the cost of
-$69\,\%$ of the workspace, and leaves the
-six-dimensional error untouched, separating amplified noise from structural
-misattribution. Velocity-level actuation, usually regarded as an obstacle,
-instead confines the dynamic model to the estimator: the residual is invariant to
-the inner servo loop, whose gain therefore need not be identified, and a
-kinematic controller reproduces the compliant behavior at one twenty-fifth of the
-cost. All results are obtained in simulation, against a second and independently
-written dynamic implementation that agrees with the model to $10^{-10}$ and that
-serves as the plant; agreement at that level establishes implementation
+the unknown to three dimensions, is established; how much force is lost, in which
+directions, and at which postures is not. This paper supplies that quantification
+for a 4-DoF arm. The force block of the wrench projector predicts which directions
+are lost, and over $2197$ configurations the six-dimensional inversion discards
+$50.5\,\%$ of an applied unit force on average while still correlating with ground
+truth at $0.997$, so a validation that looks convincing can hide a large gain
+error. The magnitude of that loss depends on the characteristic length that makes
+the wrench norm dimensionally homogeneous, a choice the unweighted pseudoinverse
+makes silently; the directions lost do not, and the point-contact inversion admits
+no such choice. Velocity-level actuation, usually regarded as an obstacle, instead
+confines the dynamic model to the estimator: the residual is invariant to the
+inner servo loop, whose gain therefore need not be identified, and a kinematic
+controller reproduces the compliant behavior at one twenty-fifth of the cost. All
+results are obtained in simulation, against an independently written dynamic
+implementation that serves as the plant and establishes implementation
 correctness, not physical realism. The hardware experiment that would test the
 directional prediction, the conditioning law, and the viability of torque inferred
 from motor current is specified but not run.
@@ -1835,53 +1824,31 @@ posture change contaminates the difference and the test returns no verdict.
 \label{sec:conclusion}
 % =========================================================================
 
-That a residual observer cannot resolve a full wrench from fewer than six joints,
-and that a point-contact model reduces the unknown to three dimensions, is
-established. This paper turns that statement into quantities a designer can use.
-The force block of the wrench projector predicts where the six-dimensional
-inversion fails and by how much: the loss is a linear function of the alignment
-with the least observable direction, exactly so at each posture and at correlation
-$0.9993$ pooled over $12\,000$ directions, and over $2197$ configurations it
-discards $50.5\,\%$ of an applied unit force on average and up to $99.6\,\%$. Two
-of those three statements are properties of the arm alone. The third is not: the
-minimum-norm criterion adds newtons to newton-meters and therefore presupposes a
-length, so the magnitude of the loss is reported here against that length, falling
-to $38.0\,\%$ at the arm's own scale, while the directions in which the loss
-occurs and the set of exactly recovered forces are invariant to it. That the
-point-contact inversion requires no such choice is an argument in its favor
-independent of accuracy. The failure of the six-dimensional inversion is also
-silent, coexisting
-with a $0.997$ correlation against ground truth, so a validation of the usual kind
-does not detect it. In the noise-free model the point-contact inversion recovers
-the force whenever $\mathrm{rank}\,\Jv=3$, which holds throughout the sampled
-workspace; this leaves numerical conditioning as the binding limitation and makes
-$\sigma_{\min}(\Jv)$ the quantity to monitor. Against an independently written
-dynamic implementation the correction improves force RMSE by a factor of fourteen.
+This paper turns an established dimensional argument into quantities a designer
+can use. On a 4-DoF arm the six-dimensional wrench inversion discards $50.5\,\%$
+of an applied unit force on average over $2197$ configurations, and the force
+block of the wrench projector predicts which directions are lost. The magnitude
+depends on the characteristic length that renders the wrench norm homogeneous,
+falling to $38.0\,\%$ at the arm's own scale, while the directions and the set of
+exactly recovered forces do not. The failure is also silent, coexisting with a
+$0.997$ correlation against ground truth. The point-contact inversion recovers the
+force wherever $\mathrm{rank}\,\Jv=3$, which holds throughout the sampled
+workspace, leaving conditioning as the binding limitation and
+$\sigma_{\min}(\Jv)$ as the quantity to monitor.
 
 Velocity-level actuation, commonly regarded as an obstacle to sensorless
-estimation, is instead a simplification. The servo reports the torque it applies,
-so the residual is invariant to the inner loop and no identification of it is
-required; the finite-differenced acceleration carries $0.006\,\%$ of the signal
-and becomes irrelevant; and a kinematic controller matches a model-based one
-throughout the compliant loop at one twenty-fifth of the cost, which confines the
-dynamic model to the estimator. Under realistic servo quantization and stiction
-the corrected estimator attains $18.0\,\%$ median relative error against
-$69.6\,\%$, and gating on $\sigma_{\min}(\Jv)$ halves its tail, at the cost of
-$69\,\%$ of the workspace, while leaving the
-six-dimensional error untouched, separating amplified noise from structural
-misattribution. Finally, because the actuator saturates below the force range of
-manual guidance, physical compliance requires no control effort and the synthetic
-loop need only cover fine guidance and the return to task.
+estimation, is instead a simplification: the servo reports the torque it applies,
+so the residual is invariant to the inner loop, and a kinematic controller matches
+a model-based one throughout the compliant loop at one twenty-fifth of the cost.
+Because the actuator saturates below the force range of manual guidance, physical
+compliance requires no control effort.
 
-Two lines follow. The first is the hardware experiment of
-Section~\ref{sec:protocol}, which tests the directional prediction, the
-conditioning law, and the viability of inferring applied torque from servo
-current, using a hanging mass and a luggage scale. Until it is run, the accuracy
-figures reported here stand as model-based predictions and the estimator has not
-been shown to survive gearbox friction, stiction, backlash, or the calibration of
-the torque constant. The second is extending the contact model to an unknown
-contact location along the links, which would restore whole-arm interaction while
-preserving the dimensional argument that makes the approach work.
+The study is limited to simulation, and the estimator has not been shown to
+survive gearbox friction, stiction, backlash, or the calibration of the torque
+constant. Future work is the hardware protocol of Section~\ref{sec:protocol},
+which tests the directional prediction, the conditioning law, and the viability of
+inferring applied torque from servo current, and extending the contact model to an
+unknown location along the links.
 
 \bibliographystyle{IEEEtran}
 \bibliography{refs}
