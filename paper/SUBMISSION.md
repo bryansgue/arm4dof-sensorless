@@ -3,8 +3,9 @@
 Estado del PDF: **17 páginas, 11 tablas, 0 errores, 0 citas o referencias sin
 resolver, `lint_prose.py` clean.**
 
-**Autoría propuesta: dos autores; ⛔ pendiente de confirmación escrita.** Ver el
-punto 1.
+**⛔ CINCO decisiones bloquean el envío**, no cuatro: autoría por escrito (punto 1),
+ORCID (2), el paquete de reproducibilidad (3), la biografía de Angélica Quito, y la
+firma de la carta con el autor de correspondencia. Ninguna depende del hardware.
 
 ⚠️ La respuesta punto por punto a las DOS revisiones del asesor del 04/08/2026
 está en `RESPONSE.md`. Leer eso antes que esto.
@@ -59,7 +60,38 @@ pregunta al subir.
 ### 2. ORCID
 IEEE Access lo pide. Se carga en el portal, no en el `.tex`.
 
-### 3. Foto de biografía — NO bloquea el primer envío
+### 3. El paquete de reproducibilidad — ⛔ BLOQUEA, y es el quinto punto
+
+La carta afirma, en `COVER_LETTER.md`:
+
+> *Every table and figure is produced by a named script maintained in the
+> accompanying **reproducibility package**, with the environment pinned, including
+> the exact commit of the solver framework.*
+
+⚠️ **Esa frase obliga a entregarlo.** Si no se adjunta ni queda accesible, se
+**saca** — no se suaviza.
+
+✅ **Lo bueno: el paquete YA EXISTE.** No hay trabajo que hacer, solo una decisión
+de acceso:
+
+| | |
+|---|---|
+| scripts | 34 en `ocp_generation/` y `hw/`, incluido `reproduce_paper_tables.py` |
+| entorno | `requirements.txt` con el commit de acados fijado (`e0759960…`, `v0.5.4-6`) |
+| repo | `git@github.com:bryansgue/arm4dof_dqnmpc.git` — ⛔ **PRIVATE** |
+
+⚠️ Y está **desactualizado**: último push 29/07/2026, o sea sin los commits de la
+revisión mayor. Publicarlo sin pushear entrega una versión que no reproduce lo
+que el paper reporta.
+
+Tres caminos, y el trabajo es el mismo en los dos primeros:
+
+1. **Repo público** — pushear y cambiar la visibilidad. Es lo más barato.
+2. **Adjuntar como material suplementario** — un zip en el portal. Evita exponer
+   el historial de git.
+3. **Ninguno** — hay que borrar esa frase de la carta.
+
+### 4. Foto de biografía — NO bloquea el primer envío
 La biografía usa `IEEEbiographynophoto`, que compila. La foto se agrega en cámara
 lista, no ahora:
 
