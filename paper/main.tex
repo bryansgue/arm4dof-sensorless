@@ -51,8 +51,8 @@
 \history{Date of publication xxxx 00, 0000, date of current version xxxx 00, 0000.}
 \doi{10.1109/ACCESS.2026.0000000}
 
-\title{Sensorless Contact-Force Estimation on Low-DoF, Velocity-Actuated
-Manipulators: A Quantitative Design Framework}
+\title{Force-to-Moment Misattribution in Sensorless Contact Estimation on
+Low-DoF, Velocity-Actuated Manipulators}
 
 % ⚠️ AUTORIA: dos autores, confirmado explicitamente por el autor del trabajo el
 %    04/08/2026. ⚠️ PENDIENTE: la biografia de Angelica Quito.
@@ -70,8 +70,8 @@ International University of Ecuador UIDE, Quito 170411, Ecuador
 \tfootnote{The research was funded by Universidad Tecnol\'ogica Indoam\'erica.}
 
 \markboth
-{J. Varela-Ald\'as \headeretal:~Sensorless Contact-Force Estimation on Low-DoF Arms}
-{J. Varela-Ald\'as \headeretal:~Sensorless Contact-Force Estimation on Low-DoF Arms}
+{J. Varela-Ald\'as \headeretal:~Force-to-Moment Misattribution on Low-DoF Arms}
+{J. Varela-Ald\'as \headeretal:~Force-to-Moment Misattribution on Low-DoF Arms}
 
 \corresp{Corresponding author: Jos\'e Varela-Ald\'as (e-mail: josevarela@uti.edu.ec).}
 
@@ -84,9 +84,9 @@ the unknown to three dimensions, is established; how much force is lost, in whic
 directions, and at which postures is not. This paper supplies that quantification
 for a 4-DoF arm. The force block of the wrench projector predicts which directions
 are lost, and over $2197$ configurations the six-dimensional inversion discards
-$50.5\,\%$ of an applied unit force on average while still correlating with ground
-truth at $0.997$, so a validation that looks convincing can hide a large gain
-error. The magnitude of that loss depends on the characteristic length that makes
+$50.5\,\%$ of an applied unit force on average, returning it as a spurious moment,
+while still correlating with ground truth at $0.997$, so a validation that looks
+convincing can hide a large gain error. The magnitude of that loss depends on the characteristic length that makes
 the wrench norm dimensionally homogeneous, a choice the unweighted pseudoinverse
 makes silently; the directions lost do not, and the point-contact inversion admits
 no such choice. Velocity-level actuation, usually regarded as an obstacle, instead
