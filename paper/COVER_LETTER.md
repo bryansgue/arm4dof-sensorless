@@ -65,7 +65,12 @@ because its central result is corrective: it identifies an error in current
 practice, quantifies it, and explains it.
 
 Sincerely,
-[autor de correspondencia]
+
+José Varela-Aldás, Ph.D. (Senior Member, IEEE)
+Corresponding author
+Centro de Investigación MIST, Facultad de Ingenierías
+Universidad Tecnológica Indoamérica, Ambato 180103, Ecuador
+josevarela@uti.edu.ec
 
 ---
 
@@ -85,7 +90,7 @@ Sincerely,
   angulares comparten la dirección, no que las rectas coincidan.
 - ⚠️ **El 50.5 % nunca va suelto**, ni aquí ni en el manuscrito: siempre con el
   baseline sin ponderar declarado al lado.
-- ⛔ Falta reemplazar `[autor de correspondencia]` por el nombre real. Ver
-  `SUBMISSION.md`.
+- ✅ Firma puesta: José Varela-Aldás, autor de correspondencia, coherente con el
+  `\corresp{}` del `.tex`. Si el orden de autoría cambia, cambia también esto.
 - Si el portal permite carta libre, recortar notas redundantes hasta ~1 página.
   **Recortar notas, no contribuciones.**
