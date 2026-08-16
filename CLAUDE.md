@@ -299,6 +299,28 @@ abreviaturas sin definir ahí: por eso dice *four-joint arm* y no *4-DoF arm*.
 Misma familia que "la pantalla mentía": un chequeo que no se corre no falla, aparenta
 estar limpio.
 
+**⚠️ EL PARÁMETRO DECISIVO PUEDE SER JUSTO EL QUE NO ESTÁ DECLARADO.** El paper
+nunca decía `k_v`, y la sección de resultados corría sobre **dos plantas
+distintas**: `k_v=20` en `test_vel_vs_torque.py` y `k_v=4` en
+`test_interaction_mil.py` y `test_compliance_regimes.py`. Es el parámetro que el
+propio paper muestra decisivo (Sec. V-A: 350 mm a `k_v=1` contra 18 mm a
+`k_v=20`). Nadie podía ni preguntarlo, así que parecía que no había problema.
+**Ante cualquier tabla: abrir el script que la produce y comparar sus CONSTANTES
+DE PLANTA contra lo que el manuscrito declara.** Y un número sin explicación en
+una tabla —acá un exceso sistemático del 32 %— es la punta de un supuesto sin
+declarar: se persigue **variando** ese supuesto, no razonándolo.
+
+**⚠️ UN INDICADOR VALIDADO EN UN PUNTO PUEDE DEGENERARSE FUERA DE ÉL.** La bandera
+de saturación de `tab:regimes` mira el par crudo `k_v(u−q̇)`: a `k_v≥20` el
+transitorio de arranque siempre pasa `τ_max` y la columna da **100 % en todas las
+filas, incluida la de 1 N**. O sea que discrimina los dos regímenes SOLO al `k_v`
+blando en que se la midió. La conclusión sobrevive porque la razón de
+desplazamiento sí discrimina en todo el rango — pero el barrido **obliga** a
+reportar el defecto del indicador, no solo el resultado bueno. Se detectó porque
+usar la bandera como umbral dejaba el conjunto "por debajo" vacío y **reventaba el
+script**: la degeneración se manifestó como error, no como número malo, que es la
+forma afortunada.
+
 **El log de LaTeX tiene desbordes REALES mezclados con ruido de la plantilla.** Los
 `Overfull \hbox (505pt) ... while \output is active` y los avisos
 `T1/formata/m/sl undefined` los produce `ieeeaccess.cls` en cada página y no son del
@@ -378,7 +400,7 @@ python3 test_noise_montecarlo.py   # ruido de servo + gating
 python3 test_vel_vs_torque.py      # T vs V1 vs V0
 python3 test_e4bis.py              # ablación de la métrica
 python3 metric_sensitivity.py      # sensibilidad a l_c + invariancia (NUEVO)
-python3 test_compliance_regimes.py # los dos regímenes, con saturación (NUEVO)
+python3 test_compliance_regimes.py # los dos regímenes + BARRIDO de k_v (4/20/100)
 python3 reproduce_paper_tables.py  # las 5 tablas que antes eran inline
 python3 make_figures.py            # figuras 3 y 4
 python3 make_arch_figure.py        # figura 1

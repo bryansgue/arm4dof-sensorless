@@ -11,11 +11,11 @@
 
 | | |
 |---|---|
-| PDF | **17 páginas, 11 tablas**, 4 figuras, 33 referencias |
-| compilación | 0 errores, 0 referencias sin resolver, `lint_prose.py` clean |
+| PDF | **17 páginas, 11 tablas**, 4 figuras, 33 referencias, abstract **246 palabras** |
+| compilación | 0 errores, 0 referencias sin resolver, 0 overfull reales, `lint_prose.py` clean |
 | autoría | ⛔ **propuesta**: dos autores, **pendiente de confirmación escrita**. Ver `SUBMISSION.md` |
-| bloqueos | autoría por escrito · biografía de Angélica Quito · autor de correspondencia en la carta · ORCID |
-| carta de presentación | borrador en `COVER_LETTER.md` |
+| bloqueos | autoría por escrito · biografía de Angélica Quito · ORCID · decisión del paquete de reproducibilidad |
+| carta de presentación | `COVER_LETTER.md`, firmada por José (autor de correspondencia) |
 
 ⚠️ Cualquier número de páginas, tablas o autoría que aparezca MÁS ABAJO pertenece a
 la ronda en que se escribió y **no describe el estado de hoy**.
@@ -27,6 +27,69 @@ la ronda en que se escribió y **no describe el estado de hoy**.
   cerrados, y el primero terminó **mejor** de lo recomendado: hay demostración
   analítica, así que no hizo falta degradar la invariancia a observación empírica.
 - **Ronda 4** (ajustes documentales): "Ronda 4".
+- **Ronda 5** (16/08/2026, autorrevisión sin asesor): "Ronda 5". Formato de venue
+  y supuestos sin declarar. Es la primera ronda sin revisor externo.
+
+## Ronda 5 — 16/08/2026, autorrevisión antes de enviar
+
+Sin asesor. Dos hallazgos que no eran de prosa.
+
+**1. El abstract violaba un límite duro de IEEE Access.** 265 palabras contra un
+tope de 250. Sobrevivió dos revisiones completas porque **RA-L no tiene tope de
+abstract** y la revisión venía calibrada en RA-L. Corregido a 246 (248 en el peor
+caso de conteo). Ocho cortes de redacción, ningún número ni afirmación tocada.
+`4-DoF` → `four-joint` saca además la única abreviatura, que Access prohíbe ahí.
+
+**2. La sección de resultados corría sobre DOS plantas distintas sin declararlo.**
+`k_v` no aparecía con valor en ningún experimento:
+
+| tabla | script | `k_v` |
+|---|---|---|
+| `tab:formulations` | `test_vel_vs_torque.py` | 20 |
+| `tab:mil`, `fig:traces`, `tab:v0loop` | `test_interaction_mil.py` | 4 |
+| `tab:regimes` | `test_compliance_regimes.py` | 4 |
+
+Es el parámetro que el propio paper muestra decisivo (Sec. V-A: `k_v=1` → 350 mm,
+`k_v=20` → 18 mm). Declarado en las tres tablas.
+
+Eso explicó de paso la razón real/comandado de **1.32-1.38** que estaba en
+`tab:regimes` sin justificación: con lazo blando el brazo **se deflecta
+físicamente** bajo el empuje además de seguir la referencia desplazada, y ambas
+contribuciones son lineales en ‖f‖ mientras no satura — por eso la suma es un
+múltiplo constante.
+
+**Barrido de `k_v` agregado** al manuscrito y al script (`test_compliance_regimes.py`):
+
+```
+   k_v     razón debajo   razón encima   sat debajo  sat encima  transición
+     4      1.32-1.38      2.42-2.88          0 %       98 %       6-8 N
+    20      0.97-1.22      2.26-2.71        100 %      100 %       6-8 N
+   100      1.00-1.22      2.30-2.80        100 %      100 %       6-8 N
+```
+
+⚠️ **Y el barrido destapó un defecto del INDICADOR, que se reporta y no se
+esconde.** La bandera de saturación mira el par crudo `k_v(u−q̇)`, así que con lazo
+rígido el transitorio de arranque siempre pasa `τ_max` y la columna da **100 % en
+todas las filas, incluida la de 1 N**. O sea que *"los dos indicadores cambian
+juntos"* solo vale a `k_v=4`. La **razón de desplazamiento** sí discrimina a todos
+los `k_v`; la bandera, no. Escrito así en la Sec. V-C.
+
+✅ **La conclusión de los dos regímenes NO depende de `k_v`:** la transición cae
+entre 6 y 8 N en un rango de 25×, sobre la capacidad estática de 6.53 N.
+
+⚠️ El umbral del barrido se ubica por el **mayor salto relativo de la razón**, no
+por la bandera. Usar la bandera como umbral dejaba el conjunto "por debajo" VACÍO
+a `k_v≥20` y reventaba el script — que es la misma degeneración, manifestada como
+error en vez de como número malo.
+
+**Tres huecos menores, cerrados:** la Proposición 1 no tenía demostración (agregada:
+`f'(Pff−Pff²)f > 0` salvo autoespacios 0/1) · la fila *"V1 falla"* se leía como
+resultado sobre las formulaciones en velocidad y no sobre el modelo proporcional
+(aclarado en el pie de tabla, no solo en el texto) · Limitaciones no acotaba el
+alcance del *"el controlador puede ser sin modelo"* (agregado: régimen
+cuasiestático, no se afirma a velocidad ni con carga).
+
+**Formato:** `tab:gating` se salía 13.5 pt de la columna en la pág. 13. Corregido.
 
 ---
 

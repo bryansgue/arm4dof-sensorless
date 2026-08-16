@@ -1182,7 +1182,7 @@ $10$ & $83.1$  & $239.2$ & $2.88$ & $100\,\%$\\
 \end{tabular}
 \end{table}
 
-The two indicators change together. Below the transition the arm follows the
+At this loop gain the two indicators change together. Below the transition the arm follows the
 commanded displacement to within a constant factor of $1.32$ to $1.38$ and the
 actuator never saturates; above it the ratio rises to $2.42$ and $2.88$ and the
 actuator is saturated for $97$ to $100\,\%$ of the push. That the factor below
@@ -1191,7 +1191,24 @@ scale: the loop of this experiment is soft, so the arm deflects physically under
 the push in addition to following the displaced reference. Both contributions are
 linear in $\norm{\bm f}$ while the actuator is unsaturated, which is why their
 sum is a constant multiple of the command rather than a growing one, and it is
-the departure from that constant that marks the transition. The transition falls
+the departure from that constant that marks the transition.
+
+Both figures belong to this loop gain, and separating the regime from the tuning
+requires varying it. At $k_v=20$ and $k_v=100$, a range of $25$, the ratio below
+the transition falls to $0.97$--$1.22$, the stiffer loop suppressing the physical
+deflection; above the transition it stays at $2.26$--$2.80$, and the transition
+itself stays between $6$ and $8$~N at every gain. The regime boundary is a
+property of the actuator bound, not of the servo tuning.
+
+The saturation column does not survive that variation, and it is the indicator
+rather than the conclusion that fails. The flag records whether the unclipped
+demand $k_v(\bm u-\dot{\bm q})$ exceeds $\tau_{\max}$, so at $k_v\ge20$ the
+starting transient alone trips it and the column reads $100\,\%$ in every row, at
+$1$~N included. The displacement ratio separates the two regimes at every gain
+tested; the saturation flag does so only at the soft gain of
+Table~\ref{tab:regimes}.
+
+The transition falls
 between $6$ and $8$~N, which is where it should fall: the static force this posture can
 exert in this direction is $6.53$~N, computed independently from
 $\tau_{\max}$ and the gravity load. The workspace figures quoted above, median

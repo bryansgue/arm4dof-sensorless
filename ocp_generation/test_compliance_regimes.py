@@ -70,7 +70,8 @@ def profile(t, mag):
     return a*mag*DIR
 
 
-def run(mag):
+def run(mag, kv=None):
+    kv = KV if kv is None else kv
     adm = DQAdmittance(D_trans=60.0, D_rot=8.0, p0=p_task, q0=quat_task,
                        k_return=2.0, p_task=p_task, q_task=quat_task)
     W = np.zeros(G.N_PARAMS)
@@ -93,7 +94,7 @@ def run(mag):
         qd_before = x[4:].copy(); tau_acc = np.zeros(4); hit = False
         for _ in range(5):
             q, qd = x[:4], x[4:]
-            tau_raw = KV*(qd_cmd - qd)
+            tau_raw = kv*(qd_cmd - qd)
             tau = np.clip(tau_raw, -TAU_MAX, TAU_MAX)
             hit |= bool(np.any(np.abs(tau_raw) > TAU_MAX))
             tau_acc += tau
@@ -169,3 +170,66 @@ if __name__ == "__main__":
                     " transicion cae sobre la capacidad estatica"
                     if ok else
                     "NO SE DECLARA NADA: hubo fallos de solver o los regimenes no separan"))
+
+    # ======================================================================
+    # BARRIDO DE k_v — el unico parametro de planta del experimento.
+    #
+    # ⚠️ Existe porque la razon 1.32-1.38 de la tabla NO es una propiedad del
+    # regimen sino de la RIGIDEZ DEL LAZO: con lazo blando el brazo se deflecta
+    # fisicamente bajo el empuje ademas de seguir la referencia desplazada. Sin
+    # este barrido ese exceso del 32 % queda en el paper sin explicacion.
+    #
+    # ⚠️ Y destapa un defecto del INDICADOR, que hay que reportar y no esconder:
+    # la bandera de saturacion mira el par CRUDO k_v*(u - qd), asi que con lazo
+    # rigido el transitorio de arranque siempre pasa tau_max y la columna da
+    # 100 % en TODAS las filas. O sea que a k_v >= 20 la saturacion deja de
+    # discriminar; la razon sigue haciendolo. Citar el barrido obliga a decir
+    # esto tambien.
+    # ======================================================================
+    print("\n\n== BARRIDO DE k_v: que es del REGIMEN y que del LAZO ==\n")
+    print(f"  {'k_v':>6} {'razon debajo':>26} {'razon encima':>14} "
+          f"{'sat debajo':>12} {'sat encima':>12} {'transicion':>12}")
+    sweep = []
+    for kv in [4.0, 20.0, 100.0]:
+        rr = []
+        for mag in [1., 3., 5., 6., 8., 10.]:
+            c, a, s, nf = run(mag, kv=kv)
+            if nf:
+                print(f"  k_v={kv}: {nf} fallos de solver a {mag} N — fila invalidada")
+            rr.append((mag, c, a, s, nf))
+        good = [r for r in rr if r[4] == 0]
+        if len(good) < 3:
+            print(f"  {kv:6.0f}   menos de tres filas validas: no se ubica transicion")
+            continue
+        # ⚠️ La transicion se ubica por el SALTO DE LA RAZON, no por la bandera de
+        # saturacion. A k_v >= 20 la bandera da 100 % ya en la primera fila y deja
+        # el conjunto "por debajo" VACIO: usarla como umbral revienta el barrido, y
+        # esa es exactamente la degeneracion que este bloque tiene que reportar.
+        # El criterio es libre de parametros: el mayor salto relativo entre filas
+        # consecutivas.
+        rs = [r[2]/r[1] for r in good]
+        i = max(range(len(good)-1), key=lambda j: rs[j+1]/rs[j])
+        thr_k = good[i+1][0]
+        lo_k = good[:i+1]; hi_k = good[i+1:]
+        rl = [r[2]/r[1] for r in lo_k]; rh = [r[2]/r[1] for r in hi_k]
+        sl = np.mean([r[3] for r in lo_k]); sh = np.mean([r[3] for r in hi_k])
+        band = (max(r[0] for r in lo_k), thr_k)
+        sweep.append((kv, band, sl, sh))
+        print(f"  {kv:6.0f} {min(rl):8.2f}-{max(rl):.2f} {'':>10} "
+              f"{min(rh):6.2f}-{max(rh):.2f} {sl:11.0f} % {sh:11.0f} % "
+              f"{band[0]:6.0f}-{band[1]:.0f} N")
+
+    # ⚠️ los dos veredictos se LEEN del dato. El segundo es una mala noticia sobre
+    # el indicador y por eso tiene que salir impreso, no quedar en un comentario.
+    if sweep:
+        bands = {b for _, b, _, _ in sweep}
+        print("\n  transicion " + ("INVARIANTE" if len(bands) == 1 else "DEPENDIENTE de k_v")
+              + f" en el rango k_v {min(s[0] for s in sweep):.0f}-"
+                f"{max(s[0] for s in sweep):.0f} ({len(sweep)} valores): "
+              + ", ".join(f"{b[0]:.0f}-{b[1]:.0f} N" for b in sorted(bands)))
+        ciegos = [f"{kv:.0f}" for kv, _, sl, _ in sweep if sl > 50]
+        print("  ⚠️ la bandera de saturacion NO discrimina a k_v = "
+              + ", ".join(ciegos) + " (da >50 % tambien por debajo de la"
+              " transicion): con lazo rigido el transitorio siempre pasa tau_max."
+              if ciegos else
+              "  la bandera de saturacion discrimina a todos los k_v probados")
