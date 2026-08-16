@@ -11,12 +11,12 @@ Estimación de fuerza de contacto **sin sensor** y control compliant para un bra
 
 ---
 
-## Estado (04/08/2026)
+## Estado (16/08/2026)
 
 | | |
 |---|---|
-| paper | `paper/main.tex`, **17 pág**, 11 tablas, IEEE Access, 0 errores, lint clean, **33 refs** |
-| bloqueo | **la autoría por escrito** y la **biografía de Angélica Quito**. ORCID en el portal, foto en cámara lista |
+| paper | `paper/main.tex`, **17 pág**, 11 tablas, IEEE Access, 0 errores, 0 overfull reales, **abstract 246 palabras**, lint clean, **33 refs** todas citadas |
+| bloqueo | **la autoría por escrito**, **ORCID** y la **decisión del paquete de reproducibilidad**. La biografía de Angélica la aporta ella. Carta ya firmada (José, corresponding) |
 | autoría | ⛔ **PROPUESTA, sin confirmación escrita**: Varela-Aldás (MIST/Indoamérica, Ambato) y Quito (UIDE, Quito). Corresponding: José. ⚠️ Guevara NO figura, y se borró LASER/UFPB con su biografía; fue instrucción explícita suya. El asesor lo vio y lo marcó como **riesgo de integridad editorial mayor que cualquier tema de formato** |
 | probabilidad | **50-60 %** sin S3 · **70-80 %** con S3 limpio y favorable, según el asesor |
 | hardware | **nada probado en el brazo real.** `hw/` listo, procedimientos validados |
@@ -289,6 +289,23 @@ de margen contra topes: sin él, la junta se apoya y el actuador no ve la carga
 
 ## 🪤 Trampas que picaron dos veces
 
+**⛔ LA REGLA DE VENUE MANDA, Y NO ES LA MISMA QUE LA DE RA-L.** IEEE Access tiene
+tope **DURO de 250 palabras de abstract**; RA-L no tiene ninguno. El abstract llegó
+a **265** y pasó **dos revisiones completas** sin que nadie lo contara, porque quien
+revisaba venía calibrado en RA-L, donde ese número no existe. Corregido el
+16/08/2026 a 246. **Contar el abstract es el paso 1 de cualquier revisión de este
+paper** — el snippet está en `paper/SUBMISSION.md`. Access además prohíbe
+abreviaturas sin definir ahí: por eso dice *four-joint arm* y no *4-DoF arm*.
+Misma familia que "la pantalla mentía": un chequeo que no se corre no falla, aparenta
+estar limpio.
+
+**El log de LaTeX tiene desbordes REALES mezclados con ruido de la plantilla.** Los
+`Overfull \hbox (505pt) ... while \output is active` y los avisos
+`T1/formata/m/sl undefined` los produce `ieeeaccess.cls` en cada página y no son del
+paper. Los que importan son los que dicen **`in paragraph at lines N--M`**: así se
+cazó la Tabla 9 saliéndose 13.5 pt de la columna en la página 13. Filtrar con
+`grep -oE "Overfull .hbox \([0-9.]+pt too wide\) in paragraph at lines [0-9]+--[0-9]+"`.
+
 **`lint_prose.py` dando `clean` NO significa que la ortografía esté bien.** Su
 lista de raíces británicas cubre `-ise/-ised/-isation`, no los sustantivos en
 `-re`: ocho `metres`/`millimetres`/`newton-metres` pasaron limpias por el linter y
@@ -477,11 +494,13 @@ hace momento sobre eje vertical. Necesita tiro horizontal.
 1. **La autoría, POR ESCRITO.** Checklist de cuatro puntos en `paper/SUBMISSION.md`.
    Un comentario en el `.tex` NO es confirmación entre autores. El asesor lo marcó
    como riesgo de integridad editorial **mayor que cualquier tema de formato**.
-2. **La biografía de Angélica Quito** — hoy `biography pending.`, compila igual.
-3. **El autor de correspondencia en la carta** — hoy `[autor de correspondencia]`.
-4. **ORCID** de los autores, en el portal.
-5. **Decidir si habrá paquete de reproducibilidad accesible.** Si no lo hay, sale
-   esa frase de la carta: no se suaviza, se saca.
+2. **ORCID** de los autores, en el portal.
+3. **Decidir si habrá paquete de reproducibilidad accesible.** Si no lo hay, sale
+   esa frase de la carta: no se suaviza, se saca. El paquete YA existe; lo que falta
+   es pushear (último push 29/07/2026, sin la revisión mayor) y decidir visibilidad.
+4. La **biografía de Angélica Quito** la aporta ella (16/08/2026). Marcador en
+   mayúsculas en `main.tex:1886`, escrito para no sobrevivir a una lectura del PDF.
+5. ✅ **Autor de correspondencia en la carta** — firmado, José Varela-Aldás.
 
 ⚠️ **Y una decisión abierta que no es un bloqueo:** enviar la versión simulada ya, o
 esperar S3. Criterio del asesor, que es el bueno porque es condicional: **si S3 está

@@ -76,27 +76,27 @@ International University of Ecuador UIDE, Quito 170411, Ecuador
 
 \begin{abstract}
 Compliant physical interaction on low-cost manipulators must work without a
-force/torque sensor, whose price exceeds that of the arm, and with servos
-commanded in velocity rather than torque. That a residual observer cannot resolve
+force/torque sensor, whose price exceeds the arm's, and with servos
+commanded in velocity, not torque. That a residual observer cannot resolve
 a full wrench from fewer than six joints, and that a point-contact model reduces
 the unknown to three dimensions, is established; how much force is lost, in which
-directions, and at which postures is not. This paper supplies that quantification
-for a 4-DoF arm. The force block of the wrench projector predicts which directions
-are lost, and over $2197$ configurations the six-dimensional inversion discards
-$50.5\,\%$ of an applied unit force on average, returning it as a spurious moment,
-while still correlating with ground truth at $0.997$, so a validation that looks
-convincing can hide a large gain error. The magnitude of that loss depends on the characteristic length that makes
-the wrench norm dimensionally homogeneous, a choice the unweighted pseudoinverse
-makes silently; the directions lost do not, and the point-contact inversion admits
-no such choice. Velocity-level actuation, usually regarded as an obstacle, instead
-confines the dynamic model to the estimator: the residual is invariant to the
-inner servo loop, whose gain therefore need not be identified, and a kinematic
-controller reproduces the compliant behavior at one twenty-fifth of the cost. All
-results are obtained in simulation, against an independently written dynamic
-implementation that serves as the plant and establishes implementation
-correctness, not physical realism. The hardware experiment that would test the
-directional prediction, the conditioning law, and the viability of torque inferred
-from motor current is specified but not run.
+directions, and at which postures is not. This paper quantifies it for a
+four-joint arm. The force block of the wrench projector predicts which
+directions are lost, and over $2197$ configurations the six-dimensional inversion
+discards $50.5\,\%$ of an applied unit force on average, returning it as a
+spurious moment while still correlating with ground truth at $0.997$: a
+validation that looks convincing can hide a large gain error. The magnitude
+depends on the characteristic length that makes the wrench norm dimensionally
+homogeneous, a choice the unweighted pseudoinverse makes silently; the directions
+lost do not, and the point-contact inversion admits no such choice.
+Velocity-level actuation, usually regarded as an obstacle, instead confines the
+dynamic model to the estimator: the residual is invariant to the inner servo
+loop, whose gain need not be identified, and a kinematic controller reproduces
+the compliant behavior at one twenty-fifth of the cost. All results are obtained
+in simulation, against an independently written dynamic implementation that
+establishes correctness, not physical realism. The hardware experiment that would
+test the directional prediction, the conditioning law, and torque inferred from
+motor current is specified, not run.
 \end{abstract}
 
 \begin{keywords}
@@ -1305,7 +1305,7 @@ is precisely the burden the other two formulations avoid.
 
 \emph{V0 needs no model at all and is not worse.} Once the command weight is
 tuned it settles to $0.120$~mm against $0.180$~mm for T, with no failures, and it
-solves between twenty-seven and twenty-eight times faster. We quote the ratio
+solves between twenty-six and twenty-eight times faster. We quote the ratio
 rather than the absolute time because the ratio is what repeats: across two runs of
 the same binary the settled errors are identical to the digit while the absolute
 solve times move by a third. Its state is half the size and it uses neither the
@@ -1504,8 +1504,9 @@ estimator looks perfect by construction. We therefore evaluate both inversions
 under a noise model built from the published specifications of the MX-28R, not
 from measurements of one: current quantization at
 $3.36$~mA per count, Coulomb stiction of $0.05\,\mathrm{N}\cdot\mathrm{m}$ per
-joint with random sign, which Section~\ref{sec:res-sens} identifies as the
-dominant term, and twelve-bit encoder quantization. The stiction magnitude in
+joint with random sign, which enters as a torque offset and is therefore the
+class of error Section~\ref{sec:res-sens} finds dominant, and twelve-bit encoder
+quantization. The stiction magnitude in
 particular is an assumption rather than a datasheet figure, so this experiment
 bounds how the two inversions respond to noise of that character and does not
 predict the error the physical servo will produce.
@@ -1546,7 +1547,7 @@ confirms.
 \label{tab:gating}
 \centering
 \footnotesize
-\setlength{\tabcolsep}{5pt}
+\setlength{\tabcolsep}{3pt}
 \begin{tabular}{cccccc}
 \toprule
 & & \multicolumn{2}{c}{six-dimensional} & \multicolumn{2}{c}{point contact}\\

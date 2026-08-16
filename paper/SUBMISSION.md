@@ -1,11 +1,34 @@
 # Checklist de envío — IEEE Access
 
 Estado del PDF: **17 páginas, 11 tablas, 0 errores, 0 citas o referencias sin
-resolver, `lint_prose.py` clean.**
+resolver, 0 overfull reales, abstract de 246 palabras, `lint_prose.py` clean.**
 
-**⛔ CINCO decisiones bloquean el envío**, no cuatro: autoría por escrito (punto 1),
-ORCID (2), el paquete de reproducibilidad (3), la biografía de Angélica Quito, y la
-firma de la carta con el autor de correspondencia. Ninguna depende del hardware.
+**⛔ TRES decisiones bloquean el envío** (16/08/2026): autoría por escrito
+(punto 1), ORCID (2) y el paquete de reproducibilidad (3). La biografía de
+Angélica Quito la aporta ella. Ninguna depende del hardware.
+✅ La firma de la carta ya está puesta (José, autor de correspondencia).
+
+### ⚠️ LA TRAMPA DE VENUE QUE CASI CUESTA UN RECHAZO DE ESCRITORIO
+
+**IEEE Access tiene tope DURO de 250 palabras de abstract; RA-L no tiene ninguno.**
+El abstract llegó a **265 palabras** y sobrevivió dos revisiones completas porque
+quien revisaba venía calibrado en RA-L, donde ese número no existe. Corregido el
+16/08/2026 a **246** (worst case 248 si el portal cuenta el `%` aparte).
+
+⚠️ **Contar el abstract es el paso 1 de cualquier revisión de este paper**, antes
+que la prosa y antes que los números:
+
+```bash
+python3 - <<'EOF'
+import re
+a=re.search(r'\\begin\{abstract\}(.*?)\\end\{abstract\}',open('main.tex').read(),re.S).group(1)
+a=re.sub(r'\\,|\\%',' % ',a); a=re.sub(r'\\[a-zA-Z]+',' ',a); a=re.sub(r'[{}$]',' ',a)
+print(len(a.split()),'palabras  (Access: 150-250)')
+EOF
+```
+
+Access además pide el abstract **sin abreviaturas sin definir**: por eso dice
+*four-joint arm* y no *4-DoF arm*.
 
 ⚠️ La respuesta punto por punto a las DOS revisiones del asesor del 04/08/2026
 está en `RESPONSE.md`. Leer eso antes que esto.
@@ -16,9 +39,11 @@ pdflatex main && bibtex main && pdflatex main && pdflatex main
 
 ---
 
-## Estado: LISTO PARA SUBIR salvo un punto
+## Estado: LISTO PARA SUBIR salvo la autoría y la biografía
 
-El PDF compila y no tiene marcadores. Lo único que bloquea es la autoría (punto 1).
+El PDF compila limpio y cumple formato de Access. Queda **un marcador**, a
+propósito: la biografía de Angélica Quito, en `main.tex:1886`, escrito en
+mayúsculas para que no sobreviva a una lectura del PDF. Ella lo aporta.
 ORCID se carga en el portal. Las fotos de biografía van en cámara lista.
 
 ## ⚠️ Lo que TENÉS que decidir vos antes de subir
@@ -50,8 +75,10 @@ escrito, de las cuatro cosas:
       a este trabajo**, no por afiliación ni financiamiento;
 - [ ] los autores aprobaron **manuscrito, orden, afiliaciones, financiación y
       responsabilidad sobre los resultados**;
-- [ ] la **biografía de Angélica Quito** está entregada. Hoy el `.tex` dice
-      `biography pending.`: compila, pero no se envía así.
+- [ ] la **biografía de Angélica Quito** está entregada. Hoy `main.tex:1886` tiene
+      un marcador en mayúsculas: compila, pero no se envía así. La aporta ella
+      (confirmado 16/08/2026); inventarle títulos o cargos crearía un CV falso de
+      una persona real en el registro permanente de la revista.
 
 ⚠️ IEEE exige que cada autor cumpla los criterios de contribución sustancial,
 redacción o revisión crítica, y aprobación de la versión final. El portal lo
