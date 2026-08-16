@@ -603,6 +603,16 @@ deficit appears as a nonzero moment in the lower block of $\hat{\bm F}_{6}$.
 \label{prop:split}
 \end{proposition}
 
+\begin{proof}
+By \eqref{eq:sixinv}, $\hat{\bm F}_6=\Pobs\bm F$, so with $\bm m=\bm 0$ its force
+block is $\Pff\bm f$. Since $\Pobs$ is an orthogonal projector,
+$\bm 0\preceq\Pff\preceq\bm I$ and hence $\Pff^2\preceq\Pff$. Idempotence of
+$\Pobs$ gives $\norm{\hat{\bm F}_6}^2=\bm F^{\!\top}\Pobs\bm F=
+\bm f^{\!\top}\Pff\bm f$, so the squared norm of the moment block is
+$\bm f^{\!\top}(\Pff-\Pff^2)\bm f\ge0$, strictly positive unless $\bm f$ lies in
+an eigenspace of $\Pff$ with eigenvalue $0$ or $1$.
+\end{proof}
+
 The mechanism is misattribution, not loss of information. A pure force and a
 suitable force-moment pair produce identical joint torques, and minimum-norm
 selects the latter because it has smaller norm in $\R^6$. Both are
@@ -1149,9 +1159,10 @@ increasing magnitude.
 \begin{table}[!t]
 \caption{The two compliance regimes. Steady-state end-effector displacement,
 actual versus commanded by the admittance, under a push of increasing magnitude.
-The push is held for six admittance time constants and the commanded column
-matches the analytic equilibrium $\norm{\bm f}/(D_{\mathrm{trans}}k)$ to
-$0.3\,\%$. Every solve succeeded in every row.}
+Servo loop gain $k_v=4$. The push is held for six admittance time constants and
+the commanded column matches the analytic equilibrium
+$\norm{\bm f}/(D_{\mathrm{trans}}k)$ to $0.3\,\%$. Every solve succeeded in every
+row.}
 \label{tab:regimes}
 \centering
 \footnotesize
@@ -1174,7 +1185,13 @@ $10$ & $83.1$  & $239.2$ & $2.88$ & $100\,\%$\\
 The two indicators change together. Below the transition the arm follows the
 commanded displacement to within a constant factor of $1.32$ to $1.38$ and the
 actuator never saturates; above it the ratio rises to $2.42$ and $2.88$ and the
-actuator is saturated for $97$ to $100\,\%$ of the push. The transition falls
+actuator is saturated for $97$ to $100\,\%$ of the push. That the factor below
+the transition exceeds unity is itself the mechanism of this section at a smaller
+scale: the loop of this experiment is soft, so the arm deflects physically under
+the push in addition to following the displaced reference. Both contributions are
+linear in $\norm{\bm f}$ while the actuator is unsaturated, which is why their
+sum is a constant multiple of the command rather than a growing one, and it is
+the departure from that constant that marks the transition. The transition falls
 between $6$ and $8$~N, which is where it should fall: the static force this posture can
 exert in this direction is $6.53$~N, computed independently from
 $\tau_{\max}$ and the gravity load. The workspace figures quoted above, median
@@ -1266,7 +1283,7 @@ nothing: no inertia, no bias term, no servo gain.
 \begin{table}[!t]
 \caption{Controller formulations under velocity-level actuation. Regulation to a
 fixed pose from an initial error of $0.16$~m, on the plant \eqref{eq:velplant}
-with torque saturation.}
+with $k_v=20$ and torque saturation.}
 \label{tab:formulations}
 \centering
 \footnotesize
@@ -1282,7 +1299,9 @@ V0 & $4$ & no  & no  & $\bm{0.120}$ & $\bm{0.086}$ / $\bm{0.115}$\\
 \end{tabular}
 \vspace{2pt}
 \\{\footnotesize Error after settling; V0 with command weight tuned. V1 returns
-\texttt{NAN\_DETECTED} at every solve, see text. Solve times are given for two
+\texttt{NAN\_DETECTED} at every solve; the failure belongs to the proportional
+loop model \eqref{eq:servoloop}, not to velocity-level formulations in general,
+see text. Solve times are given for two
 runs of the same binary: the errors are deterministic and repeat exactly, the
 absolute timings do not, and the ratio between formulations does.}
 \end{table}
@@ -1377,7 +1396,8 @@ the dynamics including effects absent from \eqref{eq:dyn}.
 
 \subsection{Force Estimation in Closed Loop}
 \label{sec:res-estimation}
-A hand-guiding scenario is simulated at $100$~Hz. The arm holds a task pose, an
+A hand-guiding scenario is simulated at $100$~Hz on the plant
+\eqref{eq:velplant} with $k_v=4$. The arm holds a task pose, an
 external force follows a trapezoidal profile, and the compliant loop runs
 throughout. Both estimators are computed from the \emph{same} residual at every
 step, so the only difference is the assumed contact model. Two push directions are
@@ -1773,6 +1793,13 @@ another arm should recompute Table~\ref{tab:metric} rather than transport the
 percentage, and should declare $\lc$ and the point about which the moment is
 taken. What transports without recomputation is the geometric argument, the
 directional structure, and Proposition~\ref{prop:exact}.
+
+\emph{Scope of the model-free controller.} The equivalence between V0 and T is
+established in the quasi-static regime of hand guiding on a four-joint arm, where
+joint velocities stay well below the servo limit and the inertial term is small
+against the actuator authority. It is not claimed at speed, under a large
+payload, or on a mechanism where that ratio is different; there the kinematic
+limit $\dot{\bm q}=\bm u$ ceases to approximate \eqref{eq:velplant}.
 
 \emph{Known contact point.} As stated in Remark~\ref{rem:cost}, the point-contact
 model requires the contact location. Contact along the links, or contact
