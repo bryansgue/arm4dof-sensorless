@@ -92,7 +92,7 @@ lost do not, and the point-contact inversion admits no such choice.
 Velocity-level actuation, usually regarded as an obstacle, instead confines the
 dynamic model to the estimator: the residual is invariant to the inner servo
 loop, whose gain need not be identified, and a kinematic controller reproduces
-the compliant behavior at one twenty-fifth of the cost. All results are obtained
+the compliant behavior at one thirtieth of the cost. All results are obtained
 in simulation, against an independently written dynamic implementation that
 establishes correctness, not physical realism. The hardware experiment that would
 test the directional prediction, the conditioning law, and torque inferred from
@@ -239,7 +239,7 @@ actuated in velocity, spanning the chain from servo current to commanded joint
 velocity. Because the applied torque is measured rather than modeled, the inner
 velocity loop never needs to be identified and the dynamic model is confined to
 the estimator; a kinematic controller reproduces the compliant behavior at one
-twenty-fifth of the cost.
+thirtieth of the cost.
 \end{itemize}
 
 The predictive controller of Section~\ref{sec:control} is an integration
@@ -1508,7 +1508,9 @@ unchanged and retains the dynamic model, which it requires.
 
 \begin{table}[!t]
 \caption{Complete compliant loop with a model-based controller (T) and a
-model-free controller (V0). The estimator is identical in both.}
+model-free controller (V0). The estimator is identical in both. Yield is the
+maximum end-effector displacement from the task pose during the push, return the
+displacement remaining after release.}
 \label{tab:v0loop}
 \centering
 \footnotesize
@@ -1517,22 +1519,25 @@ model-free controller (V0). The estimator is identical in both.}
 \toprule
 push & ctrl & force RMSE [N] & yield [mm] & return [mm] & ms/solve\\
 \midrule
-in plane & T  & $0.0299$ & $127.1$ & $11.23$ & $2.98$\\
-         & V0 & $0.0332$ & $130.7$ & $\bm{9.24}$ & $\bm{0.119}$\\
+in plane & T  & $0.0081$ & $63.7$ & $9.18$ & $2.14$\\
+         & V0 & $0.0137$ & $50.2$ & $\bm{6.60}$ & $\bm{0.069}$\\
 \midrule
-normal   & T  & $0.0042$ & $23.0$  & $3.71$  & $3.05$\\
-         & V0 & $0.0045$ & $28.7$  & $\bm{1.92}$ & $\bm{0.123}$\\
+normal   & T  & $0.0069$ & $54.5$ & $5.21$ & $2.15$\\
+         & V0 & $0.0059$ & $44.1$ & $\bm{2.14}$ & $\bm{0.068}$\\
 \bottomrule
 \end{tabular}
 \end{table}
 
-Table~\ref{tab:v0loop} reports the outcome. Force estimation is unaffected, as it
-must be, since the estimator did not change. The compliant behavior is equivalent:
-the arm yields comparably under the push and returns closer to the task pose on
-release, in both push directions. The computational cost falls by a factor of
-twenty-five. Carrying the inertia matrix and the bias term in the controller
-therefore brings no benefit on this platform, while carrying them in the estimator
-is unavoidable.
+Table~\ref{tab:v0loop} reports the outcome. Force estimation remains accurate to
+between $0.10$ and $0.22\,\%$ of the applied push under both controllers. The
+small difference between the two columns is not the estimator, which is identical,
+but the trajectory along which it is evaluated, since the residual depends on the
+finite-differenced acceleration and the two controllers do not follow the same
+path. The compliant behavior is equivalent: the arm yields to $0.79$--$0.81$ of
+the model-based displacement and returns closer to the task pose on release, in
+both push directions. The computational cost falls by a factor of thirty-one.
+Carrying the inertia matrix and the bias term in the controller therefore brings
+no benefit on this platform, while carrying them in the estimator is unavoidable.
 
 \subsection{Robustness to Servo Noise}
 \label{sec:res-noise}
@@ -1883,7 +1888,7 @@ $\sigma_{\min}(\Jv)$ as the quantity to monitor.
 Velocity-level actuation, commonly regarded as an obstacle to sensorless
 estimation, is instead a simplification: the servo reports the torque it applies,
 so the residual is invariant to the inner loop, and a kinematic controller matches
-a model-based one throughout the compliant loop at one twenty-fifth of the cost.
+a model-based one throughout the compliant loop at one thirtieth of the cost.
 Because the actuator saturates below the force range of manual guidance, physical
 compliance requires no control effort.
 

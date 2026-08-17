@@ -91,6 +91,43 @@ cuasiestático, no se afirma a velocidad ni con carga).
 
 **Formato:** `tab:gating` se salía 13.5 pt de la columna en la pág. 13. Corregido.
 
+### La última tabla sin script — y no reprodujo
+
+`tab:v0loop` era la única de las once **sin script propio**, y no es menor: de ella
+sale el factor de costo que citan el **abstract** y la conclusión. Sobrevivió a la
+auditoría del 01/08 y a cuatro rondas. Escrito `test_v0_compliant_loop.py`
+(17/08/2026), los números cambiaron enteros:
+
+| | publicado | reproducido |
+|---|---|---|
+| in plane, T — RMSE / cede / retorna / ms | 0.0299 / 127.1 / 11.23 / 2.98 | **0.0081 / 63.7 / 9.18 / 2.14** |
+| in plane, V0 | 0.0332 / 130.7 / 9.24 / 0.119 | **0.0137 / 50.2 / 6.60 / 0.069** |
+| normal, T | 0.0042 / 23.0 / 3.71 / 3.05 | **0.0069 / 54.5 / 5.21 / 2.15** |
+| normal, V0 | 0.0045 / 28.7 / 1.92 / 0.123 | **0.0059 / 44.1 / 2.14 / 0.068** |
+
+**Factor de costo: ×25 → ×31.** Actualizado en abstract, contribuciones, Sec. VII-C
+y conclusión (*one thirtieth*). ⚠️ No confundir con el **26-28×** de
+`tab:formulations`, que es otro experimento (regulación, planta a `k_v=20`).
+
+⚠️ **Lo que lo delató fue un contraste cruzado, no leer el código.** La rama T del
+script nuevo da RMSE 0.0081 y 0.0069 N — que son **exactamente** los 0.008 y 0.007
+de `tab:mil`, misma planta, mismo estimador, mismo lazo, y esa tabla **sí** tenía
+script. La `tab:v0loop` publicada decía 0.0299 y 0.0042. Dos tablas del mismo
+experimento se contradecían, y la que mentía era la que nadie podía correr.
+
+**Dos afirmaciones se recalibraron con los números nuevos:**
+
+- *"Force estimation is unaffected, as it must be"* era demasiado fuerte. El
+  estimador es el mismo, pero el residuo depende de la aceleración por diferencias
+  finitas y los dos controladores no recorren el mismo camino. Ahora dice que la
+  estimación queda entre **0.10 y 0.22 % del empuje aplicado** con los dos, y
+  explica de dónde sale la diferencia.
+- *"the arm yields comparably"* → V0 cede **0.79-0.81×** lo que cede T. Mismo
+  orden, pero se declara el número en vez de calificarlo.
+
+Lo que **no** cambió: V0 retorna más cerca de la pose de tarea en las dos
+direcciones, y sigue sin usar `M`, `h` ni `k_v`. La conclusión se sostiene.
+
 ---
 
 Todo lo verificable de la revisión se comprobó contra el código antes de tocar el

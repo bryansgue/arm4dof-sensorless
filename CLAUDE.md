@@ -366,6 +366,15 @@ Por eso existe `reproduce_paper_tables.py`.
 **Cada número es UNA corrida hasta que se repite.** El timing varía 17% entre
 corridas del mismo binario.
 
+**⚠️ DOS TABLAS DEL MISMO EXPERIMENTO QUE NO COINCIDEN: LA QUE MIENTE ES LA QUE NO
+TIENE SCRIPT.** `tab:v0loop` fue la última sin script y sobrevivió a la auditoría
+del 01/08 y a cuatro rondas de revisión. Al escribírselo (17/08/2026) los números
+cambiaron enteros y el ×25 del **abstract** pasó a ×31. No lo delató leer el
+código: lo delató que la rama T de la tabla nueva reprodujera **exactamente** los
+RMSE de `tab:mil` (0.008 / 0.007), que sí tenía script, mientras la `tab:v0loop`
+publicada decía otra cosa. **Contrastar tablas que comparten planta y estimador es
+un chequeo gratis que ninguna auditoría de "¿tiene script?" encuentra.**
+
 **Una tabla sin script guardado es una tabla sin verificar, y el `reproduce_` no
 garantiza nada por existir.** La auditoría del 01/08/2026 creó
 `reproduce_paper_tables.py` para cerrar exactamente este defecto, y `tab:regimes`
@@ -401,6 +410,7 @@ python3 test_vel_vs_torque.py      # T vs V1 vs V0
 python3 test_e4bis.py              # ablación de la métrica
 python3 metric_sensitivity.py      # sensibilidad a l_c + invariancia (NUEVO)
 python3 test_compliance_regimes.py # los dos regímenes + BARRIDO de k_v (4/20/100)
+python3 test_v0_compliant_loop.py  # tab:v0loop — lazo compliant con T y con V0
 python3 reproduce_paper_tables.py  # las 5 tablas que antes eran inline
 python3 make_figures.py            # figuras 3 y 4
 python3 make_arch_figure.py        # figura 1
@@ -630,7 +640,17 @@ el registro viejo: la conclusión del racing son ~150 palabras y la de este pape
 romero) **es el corpus que falta** para el barrido léxico H.1 de `lint_prose.py
 --sweep`. Cierra el pendiente 7 sin descargar nada.
 
-⚠️ **La razón de costo V0 vs T tiene DOS valores y los dos son correctos:** ~27×
-en el test de regulación (Tabla IV) y **25×** en el lazo compliant completo
-(Tabla IX). El del resumen y las conclusiones es el segundo. Son experimentos
-distintos; no "unificarlos".
+⚠️ **La razón de costo V0 vs T tiene DOS valores y los dos son correctos:**
+**26-28×** en el test de regulación (`tab:formulations`, `test_vel_vs_torque.py`,
+planta a `k_v=20`) y **31×** en el lazo compliant completo (`tab:v0loop`,
+`test_v0_compliant_loop.py`, planta a `k_v=4`). El del resumen y las conclusiones
+es el segundo, hoy *one thirtieth*. Son experimentos distintos; no "unificarlos".
+
+⚠️ El 31× **reemplazó a un 25× que nunca reprodujo**: `tab:v0loop` era la última
+tabla sin script y al escribírselo (17/08/2026) los números cambiaron enteros. Lo
+que la delató no fue leer el código sino un **contraste cruzado**: la rama T de la
+tabla nueva da RMSE de fuerza 0.0081 y 0.0069 N, que son exactamente los 0.008 y
+0.007 de `tab:mil` —misma planta, mismo estimador, mismo lazo, y esa tabla SÍ
+tenía script—, mientras que la `tab:v0loop` publicada decía 0.0299 y 0.0042. O sea
+que dos tablas del mismo experimento se contradecían y la que estaba sin verificar
+era la que mentía.
