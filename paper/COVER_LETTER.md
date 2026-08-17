@@ -17,8 +17,7 @@ carta hace es que el editor no tenga que deducirlo.
 Dear Editor,
 
 We submit for consideration in IEEE Access the manuscript *"Sensorless
-Contact-Force Estimation on Low-DoF, Velocity-Actuated Manipulators: A
-Quantitative Design Framework."*
+Contact-Force Estimation on Low-DoF Manipulators."*
 
 That a residual observer cannot resolve a full six-dimensional wrench from fewer
 than six joints is established, and we say so explicitly in the paper. What was
@@ -83,6 +82,16 @@ josevarela@uti.edu.ec
 - ⚠️ **"reproducibility package" obliga a entregarlo.** La frase solo vale si el
   código se adjunta o queda en un repositorio accesible. Si no va a haber ninguno
   de los dos, hay que sacarla, no suavizarla.
+  **Estado al 17/08/2026: el repo está PRIVADO por decisión explícita ("después lo
+  hacemos público"), así que hoy la frase promete algo que el editor no puede
+  abrir.** Antes de subir: o el repo es público, o va un zip como material
+  suplementario, o se borra el párrafo entero.
+  ✅ Lo que sí quedó cierto ese día: las **11 tablas tienen script con nombre**.
+  `tab:v0loop` era la última sin uno, y al escribírselo los números cambiaron.
+- ⚠️ **El título de la carta tiene que ser el del `.tex`, verificado, no el
+  recordado.** La carta quedó citando el título largo con subtítulo después de que
+  el manuscrito lo acortara en cuatro commits: presentaba un manuscrito que no
+  existe. Corregido el 17/08/2026. Si el título vuelve a cambiar, se cambia acá.
 - ⚠️ **Ni "coplanar" ni "comparten un eje".** La primera es más débil que lo que se
   demuestra; la segunda se lee como **coaxial**, y las rectas articulares son
   distintas. La formulación exacta es: *ejes de pitch **paralelos a una dirección
