@@ -1341,7 +1341,9 @@ is precisely the burden the other two formulations avoid.
 
 \emph{V0 needs no model at all and is not worse.} Once the command weight is
 tuned it settles to $0.120$~mm against $0.180$~mm for T, with no failures, and it
-solves between twenty-six and twenty-eight times faster. We quote the ratio
+solves between twenty-six and twenty-eight times faster \emph{in this regulation
+test}; Section~\ref{sec:res-model} measures the same ratio over the complete
+compliant loop, where it is thirty-one. We quote the ratio
 rather than the absolute time because the ratio is what repeats: across two runs of
 the same binary the settled errors are identical to the digit while the absolute
 solve times move by a third. Its state is half the size and it uses neither the
@@ -1535,7 +1537,11 @@ but the trajectory along which it is evaluated, since the residual depends on th
 finite-differenced acceleration and the two controllers do not follow the same
 path. The compliant behavior is equivalent: the arm yields to $0.79$--$0.81$ of
 the model-based displacement and returns closer to the task pose on release, in
-both push directions. The computational cost falls by a factor of thirty-one.
+both push directions. The computational cost falls by a factor of thirty-one,
+against the twenty-six to twenty-eight of the regulation test of
+Table~\ref{tab:formulations}; the two differ because the task and the loop gain
+differ, not because either measurement is uncertain, and the quantity that
+transports is that the saving is more than an order of magnitude in both.
 Carrying the inertia matrix and the bias term in the controller therefore brings
 no benefit on this platform, while carrying them in the estimator is unavoidable.
 
